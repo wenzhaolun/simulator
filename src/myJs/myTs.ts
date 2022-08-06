@@ -14,9 +14,7 @@ interface UserProfile{
 class User{
     public profile: UserProfile
     public itemArray: Array<Item> = []
-    move(a: number) {
-
-    }
+    
     constructor(a: UserProfile, b: Array<Item>) {
         this.profile = a
         this.itemArray = this.itemArray.concat(b)
@@ -24,9 +22,4 @@ class User{
 }
 
 class Item {
-    public use: Function
-    constructor(name: string) {
-        this.use = (user: User) => {
-            
-        }
 }
