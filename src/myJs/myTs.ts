@@ -19,10 +19,12 @@ class User{
     }
     dropItem(x: Item) {
         const id = x.profile.id
-        this.itemArray.indexOf((ele: Item) => {
-            if (ele.profile.id === id) {
-            }
+        const index = this.itemArray.findIndex((ele) => {
+            ele.profile.id === id
         })
+        if (index >= 0) {
+            this.itemArray.splice(index, 1)
+        }
     }
     constructor(a: UserProfile, b: Array<Item>) {
         this.profile = a
