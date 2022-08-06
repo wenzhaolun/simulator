@@ -19,11 +19,14 @@ class User{
     }
     dropItem(x: Item) {
         const id = x.profile.id
-        
+        this.itemArray.indexOf((ele: Item) => {
+            if (ele.profile.id === id) {
+            }
+        })
     }
     constructor(a: UserProfile, b: Array<Item>) {
         this.profile = a
-        this.itemArray = this.itemArray.concat(b)
+        this.itemArray = b.concat(this.itemArray)
     }
 }
 
