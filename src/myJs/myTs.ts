@@ -26,6 +26,9 @@ class User{
             this.itemArray.splice(index, 1)
         }
     }
+    useItem(x: Item) {
+        const id = x.profile.id
+    }
     constructor(a: UserProfile, b: Array<Item>) {
         this.profile = a
         this.itemArray = b.concat(this.itemArray)
@@ -33,7 +36,8 @@ class User{
 }
 
 interface ItemProfile{
-    id: number,
+    id: string,
+    uuid: string | undefined,
     name: string,
     intro: string,
     atk: number,
@@ -47,5 +51,19 @@ class Item {
     public profile: ItemProfile
     constructor(a: ItemProfile) {
         this.profile = a
+        this.profile.uuid = crypto.randomUUID(8)
     }
 }
+
+class Flashlight extends Item {
+    public light: 0
+    private addLight: 0
+    on() {
+        this.light = this.addLight
+    }
+    off() {
+        this.light = 0
+    }
+}
+
+const test = new Flashlight()
