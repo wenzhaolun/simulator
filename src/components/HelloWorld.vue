@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { myTestFunction } from '../myJs/myTs'
+import { Item } from '../myJs/myTs'
 
 
 defineProps<{
@@ -9,8 +9,18 @@ defineProps<{
 
 onMounted(()=> {
   console.log('mounted')
-  const testN: number = myTestFunction('x')
-  console.log(testN)
+  const item = new Item({
+    id: '123',
+    uuid: '32',
+    name: 'item',
+    intro: '1231231231',
+    atk: 1,
+    def: 1,
+    hp: 10,
+    life: 10,
+    weight: 20
+})
+  console.log(item)
 })
 
 </script>
