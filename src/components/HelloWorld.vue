@@ -1,33 +1,22 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { Item } from '../myJs/myTs'
 
 
 defineProps<{
   msg: string;
 }>();
 
+const testMsg = 1
+
 onMounted(()=> {
-  console.log('mounted')
-  const item = new Item({
-    id: '123',
-    uuid: '32',
-    name: 'item',
-    intro: '1231231231',
-    atk: 1,
-    def: 1,
-    hp: 10,
-    life: 10,
-    weight: 20
-})
-  console.log(item)
+  
 })
 
 </script>
 
 <template>
   <div class="greetings">
-    <h1 class="green">{{ msg }}</h1>
+    <h1 class="green">{{ testMsg }}</h1>
     <h3>
       You’ve successfully created a project with
       <a target="_blank" href="https://vitejs.dev/">Vite</a> +
