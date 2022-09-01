@@ -13,10 +13,10 @@ function randomSFA (array: Array<string>): string {
     return array[randomNumber(array.length - 1)]
 }
 
-/** 由于在vue3框架下（2022-08-29），object内部包含的其他object如果使用proxy传递变量的变化，相应的变量变化时，不能触发更新。所以只能用最朴素的传递方式。
+/** 由于在vue3框架下（2022-08-29），object内部包含的其他object如果使用proxy传递变量的变化，相应的变量变化时，不能触发更新。所以只能用直接读取的传递方式。
  * 但是直接读变量这种方式无法做到各个object的textArray变量实现排序。
  * 所以需要这么一个统一使用的文本ID生成器，用于各个Object的文本在最后统一收集时排列顺序。 */
-class IDCreator {
+export class IDCreator {
     id: number = 0
 
     getId () {
@@ -26,7 +26,7 @@ class IDCreator {
     }
 }
 
-class Stage {
+export class Stage {
     private ifNew: boolean = true
     private idCreator: IDCreator
     public getIfNew (): boolean {
@@ -101,7 +101,8 @@ class Stage {
             ],
             halfway: ['你发现这根蜡烛里面还有一些东西', '你发现了桌子上还有另一支相似的却小很多的蜡烛'],
             end: ['你掰开了蜡烛，找到了藏在里面的钥匙。', '你把蜡烛放在桌子中间，并试着读出了蜡烛上的文字。'],
-            continue: ['你对蜡烛上的味道有似曾相识的感觉', '你似乎看懂了蜡烛上的文字', '你想起了一些恐怖的回忆', '你发现桌子上的痕迹很可疑']
+            continue: ['你对蜡烛上的味道有似曾相识的感觉', '你似乎看懂了蜡烛上的文字', '你想起了一些恐怖的回忆', '你发现桌子上的痕迹很可疑'],
+            findItem: []
         },
         circle: {
             start: [
@@ -110,7 +111,8 @@ class Stage {
             ],
             halfway: ['你读懂了法阵的文字，法阵发出轻微的亮光。', '你发现法阵上的一个符文很像你曾经在书上看到过的怪物印记。'],
             end: ['你破解了法阵。', '法阵消失了。'],
-            continue: ['你在这个法阵上找到了新的线索', '你似乎想起一个和法阵类似的图案']
+            continue: ['你在这个法阵上找到了新的线索', '你似乎想起一个和法阵类似的图案'],
+            findItem: []
         },
     }
 
@@ -157,6 +159,11 @@ class Stage {
             }
 
             if (newLevel === oldLevel) {
+                if (randomNumber(1) >= 0.7) { // 模拟随机判断是否找到道具
+                    const index = randomNumber(this.detectText[this.detectType].findItem.length - 1) // 随机找到什么道具，index是对应道具在数组中的排序。
+
+                    
+                }
                 this.pushToTextArray(randomSFA(this.detectText[this.detectType].continue))
             }else {
                 this.pushToTextArray(randomSFA(this.detectText[this.detectType][newLevel]))
@@ -301,7 +308,7 @@ interface EnemyData {
     smell: number
 }
 
-class EnemyGroup {
+export class EnemyGroup {
     private idCreator: IDCreator
     private group: Array<Enemy>
     private enemyMax: number = 1
@@ -411,7 +418,7 @@ class EnemyGroup {
     }
 }
 
-class Enemy {
+export class Enemy {
     private idCreator: IDCreator
     private name: string
     private nameList: Array<string> = ['全身都是眼睛的人形怪物', '由狗头混成一团的肉泥', '怪异的黑色碟状物', '巨大的蓝色触手']
@@ -570,9 +577,7 @@ interface ItemEffect {
     intelligence?: number,
     sans?: number,
     light?: number,
-    smell?: number,
-    noise?: number,
-    search?: number
+    atk?: number
 }
 
 interface _ItemFunction {
@@ -586,23 +591,7 @@ interface ItemFunction {
     func: _ItemFunction
 }
 
-interface ItemFightEffect {
-    atk?: number
-    def?: number
-}
-
-interface _ItemFightFuntion {
-    (): ItemFightEffect
-}
-
-interface ItemFightFunction {
-    uuid: string
-    name: string
-    intro: string
-    func: _ItemFightFuntion
-}
-
-class Item {
+export class Item {
     private name: string
     private intro: string
     private _atk: number = 0
@@ -612,7 +601,7 @@ class Item {
     private get atk () {
         return this._atk
     }
-    private def: number
+
     private _hp: number = 0
     private set hp (val: number) {
         this._hp = val
@@ -620,12 +609,8 @@ class Item {
     private get hp () {
         return this._hp
     }
-    /** 存放道具所有的道具效果 */
-    private functionArray: Array<ItemFunction> = []
-    /** 存放道具所有的战斗效果 */
-    private fightFunctionArray: Array<ItemFightFunction> = []
 
-    public uuid: string
+    private uuid: string
 
     /** 控制道具的hp
      * @param x 增加或减少的hp值
@@ -636,30 +621,11 @@ class Item {
     public getHp () {
         return this._hp
     }
-    public addFunction (func: ItemFunction) {
-        this.functionArray.push(func)
-    }
 
-    public addFightFunction (func: ItemFightFunction) {
-        this.fightFunctionArray.push(func)
-    }
-
-    public useItem (uuid: string): ItemEffect | false {
-        const index = this.functionArray.findIndex((ele) => {
-            ele.uuid === uuid
-        })
-        if (index >= 0) {
-            return this.functionArray[index].func()
-        } else {
-            return false
-        }
-    }
-
-    constructor(name: string, intro: string, atk: number, def: number, hp: number) {
+    constructor(name: string, intro: string, atk: number, hp: number) {
         this.name = name
         this.intro = intro
         this.atk = atk
-        this.def = def
         this.hp = hp
         this.uuid = crypto.randomUUID()
     }
@@ -668,55 +634,45 @@ class Item {
 class Flashlight extends Item {
     private light: number = 3
 
-    constructor(name: string, intro: string, atk: number, def: number, hp: number) {
-        super(name, intro, atk, def, hp)
+    use () {
 
-        this.addFunction({
-            uuid: crypto.randomUUID(),
-            name: '打开手电筒',
-            intro: '或许能让你看清现实。',
-            func: () => {
-                return {
-                    light: this.light,
-                    hp: this.getHp()
-                }
-            }
-        })
+    }
 
-        this.addFunction({
-            uuid: crypto.randomUUID(),
-            name: '关闭手电筒',
-            intro: '关闭手电筒会变黑哦',
-            func: () => {
-                return {
-                    light: 0 - this.light,
-                    hp: this.getHp()
-                }
-            }
-        })
+    constructor () {
+        super('手电筒', '或许能让你看清现实', 2, 2)
+    }
+}
 
-        this.addFightFunction({
-            uuid: crypto.randomUUID(),
-            name: '投掷手电筒',
-            intro: '扔出去可能就拿不回来了哦',
-            func: () => {
-                return {
-                    atk: 2
-                }
-            }
-        })
+class Sword extends Item {
+    constructor () {
+        super('匕首', '拿着吧，或许有用呢。', 8, 6)
 
-        this.addFightFunction({
-            uuid: crypto.randomUUID(),
-            name: '用手电筒格挡',
-            intro: '手电筒能挡什么呢',
-            func: () => {
-                
-                return {
-                    def: 1
-                }
-            }
-        })
+        // this.addFunction({
+        //     uuid: crypto.randomUUID(),
+        //     name: '用匕首攻击',
+        //     intro: '放手一搏吧',
+        //     func: () => {
+        //         return {
+        //             atk: 8
+        //         }
+        //     }
+        // })
+    }
+}
+
+class Gun extends Item {
+    constructor () {
+        super('手枪', '5颗子弹', 20, 5)
+        // this.addFunction({
+        //     uuid: crypto.randomUUID(),
+        //     name: '开枪',
+        //     intro: '瞄准，嘭！',
+        //     func: () => {
+        //         return {
+        //             atk: 20
+        //         }
+        //     }
+        // })
     }
 }
 
@@ -727,29 +683,6 @@ class ItemArray {
 
     public addItem (item: AllItem) {
         this.array.splice(0, 0, item)
-    }
-
-    public removeItem (uuid: string) {
-        const index = this.array.findIndex((ele) => {
-            uuid === ele.uuid
-        })
-    
-        if (index >= 0) {
-            this.array.splice(index, 1)
-        }
-    }
-
-    public useItem (uuid: string, fuuid: string): boolean {
-        const index = this.array.findIndex((ele) => {
-            uuid === ele.uuid
-        })
-
-        if (index >= 0) {
-            this.array[index].useItem(fuuid)
-            return true
-        } else {
-            return false
-        }
     }
 
     constructor (itemArray: Array<AllItem>) {
@@ -786,17 +719,11 @@ export class Playground{ // 包含整个游戏所有内容的总控制
         res = res.concat(this.textArray)
 
         let fRes: Array<string> = ['']
-        
-        for (let i = 0; i < res.length; i++) {
-            fRes.push('')
-        }
 
         res.forEach((ele) => {
             fRes[ele.id] = ele.text
         })
 
-        console.log('res from all getTextArray ===>', res)
-        console.log('fRes from all getTextArray ===>', fRes)
         return fRes
     }
 
