@@ -3,6 +3,27 @@ type StageDataLevel = 'a' | 'b' | 'c' | 'd'
 type DetectType = 'candle' | 'circle'
 type DetectState = 'start' | 'halfway' | 'end'
 
+class TextBox {
+    public _textBoxVal: { textArray: Array<string> } = {
+        textArray: []
+    }
+    public set textBoxVal (val: { textArray: Array<string> }) {
+        this._textBoxVal = val
+    }
+    public get textBoxVal () {
+        return this._textBoxVal
+    }
+    public pushToTextBox (text: string) {
+        console.log('text from pushToTextBox ===>', text)
+        this.textBoxVal.textArray.push(text)
+    }
+    public bindTextBox (textBoxVal: { textArray: Array<string> }) {
+        const originTextBoxContent = this.textBoxVal
+        this.textBoxVal = new Proxy(textBoxVal, {})
+        this.textBoxVal.textArray.concat(originTextBoxContent.textArray)
+    }
+}
+
 /** 根据最大值，随机获取0-最大值的整数。 */
 function randomNumber(max: number){
     return Math.round(Math.random() * max)
@@ -13,22 +34,8 @@ function randomSFA (array: Array<string>): string {
     return array[randomNumber(array.length - 1)]
 }
 
-/** 由于在vue3框架下（2022-08-29），object内部包含的其他object如果使用proxy传递变量的变化，相应的变量变化时，不能触发更新。所以只能用直接读取的传递方式。
- * 但是直接读变量这种方式无法做到各个object的textArray变量实现排序。
- * 所以需要这么一个统一使用的文本ID生成器，用于各个Object的文本在最后统一收集时排列顺序。 */
-export class IDCreator {
-    id: number = 0
-
-    getId () {
-        const res = this.id
-        this.id += 1
-        return res
-    }
-}
-
 export class Stage {
     private ifNew: boolean = true
-    private idCreator: IDCreator
     public getIfNew (): boolean {
         return this.ifNew
     }
@@ -77,19 +84,10 @@ export class Stage {
     private fullProgress = 80
     /** 调查场景的类型 */
     private detectTypeArray: Array<DetectType> = ['candle', 'circle']
-    private detectType: DetectType
+    private detectType: DetectType | undefined
 
     /** 场景单独的文字描述 */
-    private textArray: Array<{id: number, text: string}> = []
-    private pushToTextArray (text: string) {
-        this.textArray.push({
-            id: this.idCreator.getId(),
-            text
-        })
-    }
-    public getTextArray () {
-        return this.textArray
-    }
+    public textBox = new TextBox()
 
 
     /** 调查场景的文字 */
@@ -122,9 +120,12 @@ export class Stage {
         const newVal = val
         const oldVal = this._progress
 
+        if (!this.detectType) {
+            return
+        }
         
         if (oldVal === 0) {
-            this.pushToTextArray(randomSFA(this.detectText[this.detectType].start))
+            this.textBox.pushToTextBox(randomSFA(this.detectText[this.detectType].start))
         } else {
             let newLevel: DetectState
             switch (true) { // 根据总数值计算级别
@@ -164,9 +165,9 @@ export class Stage {
 
                     
                 }
-                this.pushToTextArray(randomSFA(this.detectText[this.detectType].continue))
+                this.textBox.pushToTextBox(randomSFA(this.detectText[this.detectType].continue))
             }else {
-                this.pushToTextArray(randomSFA(this.detectText[this.detectType][newLevel]))
+                this.textBox.pushToTextBox(randomSFA(this.detectText[this.detectType][newLevel]))
             }
         }
 
@@ -182,7 +183,7 @@ export class Stage {
     }
 
     /** 场景亮度 */
-    private _light: number
+    private _light: number = 0
     private set light (val: number) {
         this._light = val
     }
@@ -199,12 +200,12 @@ export class Stage {
         return this.light
     }
 
-    private smell: number
+    private smell: number = 0
     public getSmell () {
         return this.smell
     }
 
-    private noise: number
+    private noise: number = 0
     public getNoise () {
         return this.noise
     }
@@ -216,7 +217,7 @@ export class Stage {
     }
 
     private stageTypeArray: Array<StageType> = ['room', 'dungeon', 'church', 'tomb', 'tunnel', 'garden', 'valut']
-    private stageType: StageType
+    private stageType: StageType | undefined
     public getStageName () {
         switch (true) {
             case this.stageType === 'room':
@@ -242,22 +243,22 @@ export class Stage {
         return this.stageType
     }
 
-    constructor(stageNum: number, stageLength: number, idC: IDCreator) {
-        this.idCreator = new Proxy(idC, {})
-
-        this._light = randomNumber(this.stageDataLimit.light * 0.6) + this.stageDataLimit.light * 0.4,
-        this.smell = randomNumber(this.stageDataLimit.smell * 0.4),
+    public init () {
+        this._light = randomNumber(this.stageDataLimit.light * 0.6) + this.stageDataLimit.light * 0.4
+        this.smell = randomNumber(this.stageDataLimit.smell * 0.4)
         this.noise = randomNumber(this.stageDataLimit.noise * 0.4)
-
-        this.stageNum = stageNum
-        this.stageLength = stageLength
 
         this.stageType = this.stageTypeArray[randomNumber(this.stageTypeArray.length - 1)]
         this.detectType = this.detectTypeArray[randomNumber(this.detectTypeArray.length - 1)]
     }
+
+    constructor(stageNum: number, stageLength: number) {
+        this.stageNum = stageNum
+        this.stageLength = stageLength
+    }
 }
 
-export class User {
+export class Player {
     private strength: number
     private agility: number
     private intelligence: number
@@ -309,7 +310,6 @@ interface EnemyData {
 }
 
 export class EnemyGroup {
-    private idCreator: IDCreator
     private group: Array<Enemy>
     private enemyMax: number = 1
 
@@ -322,21 +322,17 @@ export class EnemyGroup {
         this._enemyRate = val
         if (this._enemyRate >= this.enemyBound && this.group.length < this.enemyMax) {
             console.log('msg before new Enemy ===>', val)
-            this.spawnEnemy(new Enemy(this.idCreator))
+            const enemy = new Enemy()
+            enemy.textBox.bindTextBox(this.textBox.textBoxVal)
+            enemy.init()
+            this.spawnEnemy(enemy)
         }
     }
     private get enemyRate () {
         return this._enemyRate
     }
 
-    public getTextArray () {
-        let res: Array<{id: number, text: string}> = []
-        this.group.forEach((ele) => [
-            res = res.concat(ele.getTextArray())
-        ])
-        return res
-    }
-
+    public textBox: TextBox = new TextBox()
 
     addEnemyRate (v: number) {
         if (v <= this.enemyBound) {
@@ -411,36 +407,25 @@ export class EnemyGroup {
         }
     }
 
-    constructor (idC: IDCreator) {
-        this.idCreator = new Proxy(idC, {})
+    constructor () {
         this.group = []
         this.enemyRate = Math.random() * this.enemyBound * 0.8 + this.enemyBound * 0.2
     }
 }
 
 export class Enemy {
-    private idCreator: IDCreator
-    private name: string
+    private name: string | undefined
     private nameList: Array<string> = ['全身都是眼睛的人形怪物', '由狗头混成一团的肉泥', '怪异的黑色碟状物', '巨大的蓝色触手']
     /** 判断对象是否是新建的
      * @true 代表是新建
      */
     private ifNew: boolean = true
 
-    private atk: number
-    private def: number
+    private atk: number = 0
+    private def: number = 0
 
     /** 敌人变化的独有文字描述 */
-    private textArray: Array<{id: number, text: string}> = []
-    private pushToTextArray (text: string) {
-        this.textArray.push({
-            id: this.idCreator.getId(),
-            text
-        })
-    }
-    public getTextArray () {
-        return this.textArray
-    }
+    public textBox = new TextBox()
 
 
     private _hp: number = 0
@@ -448,21 +433,21 @@ export class Enemy {
         console.log('msg from set hp')
         if (this.ifNew) {
             const textArray = [`一${this.name}突然从地面冒出，`, `一${this.name}从一堆腐肉中爬出，`, `一${this.name}突然凭空出现，`]
-            this.pushToTextArray(randomSFA(textArray))
+            this.textBox.pushToTextBox(randomSFA(textArray))
         } else {
             if (val > this._hp) {
-                this.pushToTextArray(this.name + '变得更活跃了')
+                this.textBox.pushToTextBox(this.name + '变得更活跃了')
             }
             if(val === this._hp) {
-                this.pushToTextArray(this.name + '似乎没有任何感觉')
+                this.textBox.pushToTextBox(this.name + '似乎没有任何感觉')
             }
             if (val < this._hp) {
                 const textArray = [`${this.name}受到损伤了`, `攻击似乎对${this.name}有效`, `一些腐坏的组织从${this.name}身上掉了下来`, `${this.name}的伤口出渗出奇怪的液体`]
-                this.pushToTextArray(randomSFA(textArray))
+                this.textBox.pushToTextBox(randomSFA(textArray))
             }
             if (val <= 0) {
                 const textArray = [`${this.name}炸开了，到处都是碎块。`, `${this.name}倒在了地上，似乎不能动了。`, `${this.name}突然消失不见了。`, `${this.name}发出惨叫，并化成了一团烟雾。`]
-                this.pushToTextArray(randomSFA(textArray))
+                this.textBox.pushToTextBox(randomSFA(textArray))
             }
         }
         this._hp = val
@@ -477,11 +462,11 @@ export class Enemy {
         console.log('msg from set noise')
         if (this.ifNew) {
             const textArray = [`${this.name}似乎在发出古怪的声音`, `${this.name}不断传来凄惨的哀嚎声`, `${this.name}奇怪而又刺耳的尖叫声向你袭来`]
-            this.pushToTextArray(randomSFA(textArray))
+            this.textBox.pushToTextBox(randomSFA(textArray))
         } else {
             if (val > this._noise) {
                 const textArray = [`${this.name}发出诡异的笑声。`, `${this.name}发出恐怖的嚎叫。`, `从${this.name}的方向传来刺耳的电波声。`, `${this.name}发出惨叫。`]
-                this.pushToTextArray(randomSFA(textArray))
+                this.textBox.pushToTextBox(randomSFA(textArray))
             }
         }
         this._noise = val
@@ -496,11 +481,11 @@ export class Enemy {
         console.log('msg from set smell')
         if (this.ifNew) {
             const textArray = [`同时${this.name}还传来一阵阵恶臭`, '并且伴随着一股诡异的味道。', '怪异的腥味也随之而来']
-            this.pushToTextArray(randomSFA(textArray))
+            this.textBox.pushToTextBox(randomSFA(textArray))
         } else {
             if (val > this._smell) {
                 const textArray = [`${this.name}向你呕吐了一股恶心的液体。`, `一阵恶臭从${this.name}散播开来`, `恶心的液体从${this.name}身上流出，且伴随着腥味。`, `${this.name}冒出黄色的浓烟，像是一股硫磺的味道。`]
-                this.pushToTextArray(randomSFA(textArray))
+                this.textBox.pushToTextBox(randomSFA(textArray))
             }
         }
 
@@ -560,14 +545,16 @@ export class Enemy {
     //     }
     // }
 
-    constructor(idC: IDCreator) {
-        this.idCreator = new Proxy(idC, {})
+    public init () {
         this.name = this.nameList[randomNumber(this.nameList.length - 1)]
         this.atk = randomNumber(this.enemyDataLimit.atk)
         this.def = randomNumber(this.enemyDataLimit.def)
         this.hp = randomNumber(this.enemyDataLimit.hp * 0.8) + this.enemyDataLimit.hp * 0.2
         this.noise = randomNumber(this.enemyDataLimit.noise)
         this.smell = randomNumber(this.enemyDataLimit.smell)
+    }
+
+    constructor() {
     }
 }
 
@@ -694,38 +681,15 @@ class ItemArray {
 type StageDataType = 'light' | 'smell' | 'noise'
 
 export class Playground{ // 包含整个游戏所有内容的总控制
-    private idCreator: IDCreator
+    private player: Player
 
-    private user: User
-
-    private enemyGroup: EnemyGroup
+    private enemyGroup: EnemyGroup | undefined
     private stageNumber: number = 0
     private stageLength: number = 4
 
-    private stage: Stage
+    private stage: Stage | undefined
 
-    private textArray: Array<{id: number, text: string}> = []
-    private pushToTextArray (text: string) {
-        this.textArray.push({
-            id: this.idCreator.getId(),
-            text
-        })
-    }
-
-    public getTextArray () {
-        let res: Array<{id: number, text: string}> = []
-        res = res.concat(this.enemyGroup.getTextArray())
-        res = res.concat(this.stage.getTextArray())
-        res = res.concat(this.textArray)
-
-        let fRes: Array<string> = ['']
-
-        res.forEach((ele) => {
-            fRes[ele.id] = ele.text
-        })
-
-        return fRes
-    }
+    public textBox = new TextBox()
 
     /** 根据场景里light、smell、noise这三个属性的变化，分别计算出等级，和对应要显示的文字。 
     * @param newVal 当前属性的数值。
@@ -856,7 +820,7 @@ export class Playground{ // 包含整个游戏所有内容的总控制
         }
 
 
-        if (this.stage.getIfNew()) { // 检查是否是新开的场景，如果是新开的场景，使用完整描述句式。
+        if (this.stage && this.stage.getIfNew()) { // 检查是否是新开的场景，如果是新开的场景，使用完整描述句式。
             if (type === 'noise') {
                 this.stage.offIfNew()
             }
@@ -870,17 +834,17 @@ export class Playground{ // 包含整个游戏所有内容的总控制
                     `你来到了一个${headA + this.stage.getStageName()}`,
                     `你身处在一个${headA + this.stage.getStageName()}里`
                 ]
-                this.pushToTextArray(randomSFA(headB))
+                this.textBox.pushToTextBox(randomSFA(headB))
             } else {
-                this.pushToTextArray(randomSFA(sample[type].new[newLevel]))
+                this.textBox.pushToTextBox(randomSFA(sample[type].new[newLevel]))
             }
         } else {
             if (newLevel !== currentLevel) {
                 if (newVal > curVal) {
-                    this.pushToTextArray(randomSFA(sample[type].increase[newLevel]))
+                    this.textBox.pushToTextBox(randomSFA(sample[type].increase[newLevel]))
                 }
                 if (newVal < curVal) {
-                    this.pushToTextArray(randomSFA(sample[type].decrease[newLevel]))
+                    this.textBox.pushToTextBox(randomSFA(sample[type].decrease[newLevel]))
                 }
             }
         }
@@ -920,7 +884,9 @@ export class Playground{ // 包含整个游戏所有内容的总控制
     /** 游戏内自动推进的脚本 */
     public autoRun () {
         console.log('autoRun')
-        this.enemyGroup.randomAction()
+        if (this.enemyGroup) {
+            this.enemyGroup.randomAction()
+        }
     }
 
     /** 存放玩家可以使用的控制选项 */
@@ -950,10 +916,9 @@ export class Playground{ // 包含整个游戏所有内容的总控制
     /** 接收玩家输入的操作 */
     public myControl (uuid: string) {
         console.log('control')
-        if (uuid) {
+        if (this.stage && uuid) {
             this.stage.addProgress(randomNumber(20))
         }
-        console.log('textArray after control ===>', this.textArray)
     }
 
     /** 计算分析用户的操作 */
@@ -963,9 +928,11 @@ export class Playground{ // 包含整个游戏所有内容的总控制
 
     /** 刷新当前数据，并通过this.write完成反馈给玩家的文字的处理。 */
     public update () {
-        this.totalLight = this.stage.getLight() + this.user.getLight()
-        this.totalSmell = this.stage.getSmell() + this.user.getSmell() +this.enemyGroup.getSmell()
-        this.totalNoise = this.stage.getSmell() + this.enemyGroup.getNoise()
+        if (this.stage && this.enemyGroup) {
+            this.totalLight = this.stage.getLight() + this.player.getLight()
+            this.totalSmell = this.stage.getSmell() + this.player.getSmell() + this.enemyGroup.getSmell()
+            this.totalNoise = this.stage.getSmell() + this.enemyGroup.getNoise()
+        }
     }
 
     public useItem () {
@@ -974,13 +941,15 @@ export class Playground{ // 包含整个游戏所有内容的总控制
     public play() {
     }
 
-    constructor(user: User) {
-        this.idCreator = new IDCreator()
+    public init () {
+        this.enemyGroup = new EnemyGroup()
+        this.enemyGroup.textBox.bindTextBox(this.textBox.textBoxVal)
+        this.stage = new Stage(this.stageNumber, this.stageLength)
+        this.stage.textBox.bindTextBox(this.textBox.textBoxVal)
+        this.stage.init()
+    }
 
-        this.user = user
-
-        this.enemyGroup = new EnemyGroup(this.idCreator)
-
-        this.stage = new Stage(this.stageNumber, this.stageLength, this.idCreator)
+    constructor(player: Player) {
+        this.player = player
     }
 }
