@@ -4,14 +4,8 @@ type DetectType = 'candle' | 'circle'
 type DetectState = 'start' | 'halfway' | 'end'
 
 class TextBox {
-    public _textBoxVal: { textArray: Array<string> } = {
+    public textBoxVal: { textArray: Array<string> } = {
         textArray: []
-    }
-    public set textBoxVal (val: { textArray: Array<string> }) {
-        this._textBoxVal = val
-    }
-    public get textBoxVal () {
-        return this._textBoxVal
     }
     public pushToTextBox (text: string) {
         console.log('text from pushToTextBox ===>', text)
@@ -25,7 +19,7 @@ class TextBox {
 }
 
 /** 根据最大值，随机获取0-最大值的整数。 */
-function randomNumber(max: number){
+function randomNumber (max: number) {
     return Math.round(Math.random() * max)
 }
 
@@ -34,7 +28,7 @@ function randomSFA (array: Array<string>): string {
     return array[randomNumber(array.length - 1)]
 }
 
-export class Stage {
+class Stage {
     private ifNew: boolean = true
     public getIfNew (): boolean {
         return this.ifNew
@@ -309,7 +303,7 @@ interface EnemyData {
     smell: number
 }
 
-export class EnemyGroup {
+class EnemyGroup {
     private group: Array<Enemy>
     private enemyMax: number = 1
 
@@ -578,7 +572,7 @@ interface ItemFunction {
     func: _ItemFunction
 }
 
-export class Item {
+class Item {
     private name: string
     private intro: string
     private _atk: number = 0
