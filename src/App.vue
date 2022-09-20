@@ -14,6 +14,34 @@ playground.init()
 
 // playground.autoRun()
 
+// test start
+
+class TA {
+  private val: number = 0
+  private tb: TB
+
+  addVal () {
+    this.tb.val += 1
+  }
+
+  constructor (tb: TB) {
+    this.tb = tb
+  }
+}
+
+class TB {
+  val: number = 0
+
+  addVal () {
+    this.val += 1
+  }
+}
+
+const tb = reactive(new TB())
+const ta = reactive(new TA(tb))
+
+// test end
+
 onMounted(() => {
   console.log('mounted here?')
 })
@@ -23,22 +51,35 @@ onMounted(() => {
 <template>
   <div>
     <div>
-      <div v-for="ele in playground.getPlayerControl().playerControl" @click="playground.activatePlayerControl({key: ele.key})" style="border: 2px black solid;">
-        <div>{{ele.intro}}</div>
+      <div
+      v-for="ele in playground.getPlayerControl().playerControl"
+      @click="playground.activatePlayerControl({key: ele.key})"
+      style="border: 2px black solid;"
+      >
         <div>{{ele.name}}</div>
+        <div>{{ele.intro}}</div>
       </div>
-      <div v-for="ele in playground.getPlayerControl().itemControl[0]" @click="playground.activatePlayerControl({uuid: ele.uuid, key: ele.key})" style="border: 2px black solid;">
-        <div>{{ele.intro}}</div>
+      <div
+      v-for="ele in playground.getPlayerControl().itemControl[0]"
+      @click="playground.activatePlayerControl({uuid: ele.uuid, key: ele.key})"
+      style="border: 2px black solid;"
+      >
         <div>{{ele.name}}</div>
+        <div>{{ele.intro}}</div>
       </div>
-      <div v-for="ele in playground.getPlayerControl().itemControl[1]" @click="playground.activatePlayerControl({uuid: ele.uuid, key: ele.key})" style="border: 2px black solid;">
-        <div>{{ele.intro}}</div>
+      <div
+      v-for="ele in playground.getPlayerControl().itemControl[1]"
+      @click="playground.activatePlayerControl({uuid: ele.uuid, key: ele.key})"
+      style="border: 2px black solid;"
+      >
         <div>{{ele.name}}</div>
+        <div>{{ele.intro}}</div>
       </div>
     </div>
     <div v-for="ele in playground.getTextList()">
       {{ ele }}
     </div>
+    <div @click="ta.addVal">{{tb.val}}</div>
   </div>
 </template>
 

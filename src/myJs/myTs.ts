@@ -47,15 +47,34 @@ function randomPlusValue (min: number, max: number, eachPercent: number) {
 }
 
 class TextBox {
-    public textBoxVal: Array<string> = []
+    public textArray: Array<string> = []
 
-    public pushToTextBox (text: string) {
-        console.log('text from pushToTextBox ===>', text)
-        this.textBoxVal.splice(0 , 0, text)
-        console.log('textBoxVal ==>', this.textBoxVal)
+    public push (text: string | null) {
+        console.log('text from push ==>', text)
+        if (text) {
+            this.textArray.splice(0 , 0, text)
+        } else {
+            console.log('text is null')
+        }
     }
     public getTextBox () {
-        return this.textBoxVal
+        return this.textArray
+    }
+}
+
+class PushTextMod {
+    /**推送文字的方法 */
+    protected push: TextBox['push'] | undefined
+    public bindPush (push: TextBox['push']) {
+        console.log('msg from bindPush')
+        this.push = push
+    }
+    protected pushText (text: string | null) {
+        if(this.push) {
+            this.push(text)
+        } else {
+            console.log('no textBox, can\'t write.', text)
+        }
     }
 }
 
@@ -64,7 +83,7 @@ class TextBox {
  * 扩展的值的变化触发合计的值的变化
  * 合计的值的变化触发相关描述文字的变化
  */
-abstract class BasicData {
+abstract class BasicData extends PushTextMod {
     /**记录数据是否是新的，从而判断数据按新的或旧的来生成描述文字。 */
     protected ifDataNew: boolean = true
     protected abstract _data: number
@@ -75,6 +94,10 @@ abstract class BasicData {
     }
     protected get data () {
         return this._data
+    }
+    public init (push: TextBox['push'], initialValue: number) {
+        this.bindPush(push)
+        this.data = initialValue
     }
     /**获取属性的值 */
     public getVal () {
@@ -206,33 +229,6 @@ abstract class BasicData {
     * @param curVal 当前记录的属性的等级
     */
     protected abstract readonly whenDataChange: (newVal: number, curVal: number) => void
-    /**推送文字的方法 */
-    protected pushToTextBox: TextBox['pushToTextBox'] | undefined
-    /**绑定pushToTextBox方法 */
-    protected bindPushToTextBox (pushToTextBox: TextBox['pushToTextBox']) {
-        this.pushToTextBox = pushToTextBox
-    }
-    /**写文字（就是pushToTextBox套一层判断而已） */
-    protected write (text: string | null) {
-        if (text) {
-            if (this.pushToTextBox) {
-                this.pushToTextBox(text)
-            } else {
-                console.log('pushToTextBox undefine')
-            }
-        } else {
-            console.log('text is null')
-        }
-    }
-
-    /**初始化，绑定推送文字、数值初始化等 */
-    public init (x: {
-        pushToTextBox: TextBox['pushToTextBox'],
-        initialValue: number
-    }) {
-        this.bindPushToTextBox(x.pushToTextBox)
-        this.data = x.initialValue
-    }
 }
 
 
@@ -244,13 +240,13 @@ abstract class BasicDataForHP extends BasicData {
         this.whenDataChange(newVal, curVal)
         this._totalData = val
         if (val <= 0) {
-            this.die()
+            this.user.die()
         }
     }
     protected get totalData(): number {
         return this._totalData
     }
-    protected abstract die: (x?: any) => void
+    protected abstract user: Player | Enemy
 }
 
 /**专供给Stage的光、气味、噪声的BasicData */
@@ -291,24 +287,26 @@ class BasicDataForSLSN extends BasicData {
         let newLevel: _AT._STAGE_DATA_LEVEL = this.calLevel(newVal)
         let currentLevel: _AT._STAGE_DATA_LEVEL = this.calLevel(curVal)
         if (this.ifDataNew) { // 检查是否是新开的场景，如果是新开的场景，使用完整描述句式。
-            this.write(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.NEW][newLevel]))
+            this.pushText(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.NEW][newLevel]))
             this.ifDataNew = false
         } else {
             if (newLevel > currentLevel) {
-                this.write(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.INCREASE][newLevel]))
+                this.pushText(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.INCREASE][newLevel]))
             }
             if (newLevel < currentLevel) {
-                this.write(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.DECREASE][newLevel]))
+                this.pushText(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.DECREASE][newLevel]))
             }
         }
     }
 
-    constructor (x: {
-        stageDataType: BasicDataForSLSN['stageDataType'],
-        totalDataMin: BasicData['totalDataMin'],
-        totalDataMax: BasicData['totalDataMax'],
-        stageType: ReturnType<Stage['getStageType']>
-    }) {
+    constructor (
+        x: {
+            stageDataType: BasicDataForSLSN['stageDataType'],
+            totalDataMin: BasicData['totalDataMin'],
+            totalDataMax: BasicData['totalDataMax'],
+            stageType: ReturnType<Stage['getStageType']>
+        }
+    ) {
         super()
         this.stageDataType = x.stageDataType
         this.totalDataMin = x.totalDataMin
@@ -351,28 +349,28 @@ class ProgressForStage extends BasicData {
     /**生成文字 */
     protected whenDataChange: BasicData['whenDataChange'] = (newVal: number, curVal: number) => {
         if (curVal === 0) {
-            this.write(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][_AT._DETECT_STATE.START]))
+            this.pushText(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][_AT._DETECT_STATE.START]))
         } else {
             const newState: _AT._DETECT_STATE = this.calStateForProgress(newVal)
             const curState: _AT._DETECT_STATE = this.calStateForProgress(curVal)
 
             const res: _AT._DETECT_STATE = newState === curState ? _AT._DETECT_STATE.CONTINUE : newState
             console.log('stageType ===>', this.stageType, 'detectType ===>', this.detectType, 'res ===>', res)
-            this.write(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][res]))
+            this.pushText(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][res]))
         }
     }
 
-    public init (x: {
-        pushToTextBox: TextBox['pushToTextBox'],
-    }) {
-        this.bindPushToTextBox(x.pushToTextBox)
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
     }
 
-    constructor (x: {
-        totalDataMin: ProgressForStage['totalDataMin'],
-        totalDataMax: ProgressForStage['totalDataMax'],
-        stageType: ProgressForStage['stageType']
-    }) {
+    constructor (
+        x: {
+            totalDataMin: ProgressForStage['totalDataMin'],
+            totalDataMax: ProgressForStage['totalDataMax'],
+            stageType: ProgressForStage['stageType']
+        }
+    ) {
         super()
         this.totalDataMin = x.totalDataMin
         this.totalDataMax = x.totalDataMax
@@ -380,7 +378,7 @@ class ProgressForStage extends BasicData {
     }
 }
 
-class Stage {
+class Stage extends PushTextMod {
     private stageType: _AT._STAGE_TYPE = randomEnumKey(_AT._STAGE_TYPE)
     public getStageType (): _AT._STAGE_TYPE {
         return this.stageType
@@ -404,6 +402,12 @@ class Stage {
     private smell: BasicDataForSLSN
     public setSmell ({uuid, val}: {uuid: string, val: number}) {
         this.smell.setExtendData({
+            uuid,
+            val
+        })
+    }
+    public addSmell ({uuid, val}: {uuid: string, val: number}) {
+        this.smell.plusExtendData({
             uuid,
             val
         })
@@ -450,92 +454,71 @@ class Stage {
     public getIfProgressUpgrade () {
         return this.progress.getIfProgressUpgrade()
     }
-
-    private pushToTextBox: TextBox['pushToTextBox'] | undefined
-    /**绑定pushToTextBox方法 */
-    protected bindPushToTextBox (pushToTextBox: TextBox['pushToTextBox']) {
-        this.pushToTextBox = pushToTextBox
-    }
-    /**写文字（就是pushToTextBox套一层判断而已） */
-    protected write (text: string | null) {
-        if (text) {
-            if (this.pushToTextBox) {
-                this.pushToTextBox(text)
-            } else {
-                console.log('pushToTextBox undefine')
-            }
-        } else {
-            console.log('text is null')
-        }
-    }
     
-    public init (pushToTextBox: TextBox['pushToTextBox']) {
-        this.bindPushToTextBox(pushToTextBox)
-        console.log('stage write ==>', randomEFA(STAGE_BOX[this.stageType].state[this.stageState]))
-        this.write(randomEFA(STAGE_BOX[this.stageType].state[this.stageState]))
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
+    
+        this.light.init(
+            push,
+            randomInitialValue(LIMIT.stage.light.min, LIMIT.stage.light.max, LIMIT.stage.light.percent)
+        )
 
-        this.light.init({
-            pushToTextBox: (x) => {
-                pushToTextBox(x)
-            },
-            initialValue: randomNumber(LIMIT.stage.light.max)
-        })
+        this.smell.init(
+            push,
+            randomInitialValue(LIMIT.stage.smell.min, LIMIT.stage.smell.max, LIMIT.stage.smell.percent)
+        )
 
-        this.smell.init({
-            pushToTextBox: (x) => {
-                pushToTextBox(x)
-            },
-            initialValue: 8
-        })
+        this.noise.init(
+            push,
+            randomInitialValue(LIMIT.stage.noise.min, LIMIT.stage.noise.max, LIMIT.stage.noise.percent)
+        )
 
-        this.noise.init({
-            pushToTextBox: (x) => {
-                pushToTextBox(x)
-            },
-            initialValue: 8
-        })
-
-        this.progress.init({
-            pushToTextBox: (x) => {
-                pushToTextBox(x)
-            }
-        })
+        this.progress.init(push)
     }
 
-    constructor ( x: {
+    constructor (
         stageState: _AT._STAGE_STATE
-    } ) {
-        this.stageState = x.stageState
+    ) {
+        super()
+        this.stageState = stageState
     
-        this.light = new BasicDataForSLSN({
-            stageDataType: _AT._STAGE_DATA.LIGHT,
-            totalDataMin: 0,
-            totalDataMax: 20,
-            stageType: this.stageType
-        })
-        this.smell = new BasicDataForSLSN({
-            stageDataType: _AT._STAGE_DATA.SMELL,
-            totalDataMin: 0,
-            totalDataMax: 20,
-            stageType: this.stageType
-        })
-        this.noise = new BasicDataForSLSN({
-            stageDataType: _AT._STAGE_DATA.NOISE,
-            totalDataMin: 0,
-            totalDataMax: 20,
-            stageType: this.stageType
-        })
-        this.progress = new ProgressForStage({
-            totalDataMin: 0,
-            totalDataMax: 80,
-            stageType: this.stageType
-        })
+        this.light = new BasicDataForSLSN(
+            {
+                stageDataType: _AT._STAGE_DATA.LIGHT,
+                totalDataMin: 0,
+                totalDataMax: 20,
+                stageType: this.stageType
+            }
+        )
+        this.smell = new BasicDataForSLSN(
+            {
+                stageDataType: _AT._STAGE_DATA.SMELL,
+                totalDataMin: 0,
+                totalDataMax: 20,
+                stageType: this.stageType
+            }
+        )
+        this.noise = new BasicDataForSLSN(
+            {
+                stageDataType: _AT._STAGE_DATA.NOISE,
+                totalDataMin: 0,
+                totalDataMax: 20,
+                stageType: this.stageType
+            }
+        )
+        this.progress = new ProgressForStage(
+            {
+                totalDataMin: 0,
+                totalDataMax: 80,
+                stageType: this.stageType
+            }
+        )
     }
 }
 
 /**玩家或者敌人的道具数据类 */
-class ItemArray {
-    private userUUID: string
+class ItemArray extends PushTextMod {
+    private user: Player
     private itemArray: Array<Item> = []
     public getItemAmount () {
         return this.itemArray.length
@@ -556,11 +539,14 @@ class ItemArray {
 
     public addItem (item: Item) {
         this.itemArray.splice(0, 0, item)
+        this.itemArray[0].init((text) => {
+            this.pushText(text)
+        })
         this.itemArray[0].setUserAndState({
-            userUUID: this.userUUID,
+            user: this.user,
             state: _AT._ITEM_USE_STATE.ADDED
         })
-        this.write(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[this.itemArray[0].getState()]))
+        this.pushText(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[this.itemArray[0].getState()]))
     }
 
     public removeItem (x: {uuid: string, state: _AT._ITEM_USE_STATE}) {
@@ -571,10 +557,10 @@ class ItemArray {
         if (index >= 0) {
             const removedItem = this.itemArray.splice(index, 1)[0]
             removedItem.setUserAndState({
-                userUUID: this.userUUID,
+                user: this.user,
                 state: _AT._ITEM_USE_STATE.REMOVED
             })
-            this.write(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[removedItem.getState()]))
+            this.pushText(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[removedItem.getState()]))
         } else {
             console.log('removeItem faile, can\'t find item')
         }
@@ -592,80 +578,54 @@ class ItemArray {
         }
     }
 
-    private pushToTextBox: TextBox['pushToTextBox'] | undefined
-    /**绑定pushToTextBox方法 */
-    protected bindPushToTextBox (pushToTextBox: TextBox['pushToTextBox']) {
-        this.pushToTextBox = (text: string) => {
-            pushToTextBox(text)
-        }
-    }
-    /**写文字（就是pushToTextBox套一层判断而已） */
-    protected write (text: string | null) {
-        if (text) {
-            if (this.pushToTextBox) {
-                this.pushToTextBox(text)
-            } else {
-                console.log('pushToTextBox undefine')
-            }
-        } else {
-            console.log('text is null')
-        }
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
     }
 
-    /**初始化，绑定推送文字、数值初始化等 */
-    public init (x: {
-        pushToTextBox: TextBox['pushToTextBox']
-    }) {
-        this.bindPushToTextBox(x.pushToTextBox)
-    }
-
-    constructor (x: {
-        userUUID: ItemArray['userUUID']
-    }) {
-        this.userUUID = x.userUUID
+    constructor (
+        user: Player,
+    ) {
+        super()
+        this.user = user
     }
 }
 
 class HpForPlayer extends BasicDataForHP {
     protected _data: BasicData['_data'] = 0
+    protected user: BasicDataForHP['user']
     protected totalDataMin: BasicData['totalDataMin']
     protected totalDataMax: BasicData['totalDataMax']
     protected whenDataChange: BasicData['whenDataChange'] = (newVal, curVal) => {
-        if (newVal > 0) {
-            if (newVal > curVal) {
-                this.write(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
+        if (curVal > 0) {
+            if (newVal > 0) {
+                if (newVal > curVal) {
+                    this.pushText(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
+                }
+        
+                if (newVal < curVal) {
+                    this.pushText(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
+                }
+            } else {
+                this.pushText(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
             }
-    
-            if (newVal < curVal) {
-                this.write(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
-            }
-        } else {
-            this.write(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
         }
     }
-    protected die: BasicDataForHP['die']
-
-    public init (x: {
-        pushToTextBox: TextBox['pushToTextBox'],
-        initialValue: number
-    }) {
-        this.bindPushToTextBox(x.pushToTextBox)
-        this._data = x.initialValue
-    }
     
-    constructor (x: {
-        totalDataMin: BasicDataForHP['totalDataMin'],
-        totalDataMax: BasicDataForHP['totalDataMax'],
-        die: BasicDataForHP['die']
-    }) {
+    constructor (
+        user: Player,
+        x: {
+            totalDataMin: BasicDataForHP['totalDataMin'],
+            totalDataMax: BasicDataForHP['totalDataMax'],
+        }
+    ) {
         super()
+        this.user = user
         this.totalDataMin = x.totalDataMin
         this.totalDataMax = x.totalDataMax
-        this.die = x.die
     }
 }
 
-class Player {
+class Player extends PushTextMod {
     private uuid: string = crypto.randomUUID()
     public getUUID () {
         return this.uuid
@@ -707,7 +667,7 @@ class Player {
     /**被攻击的处理方法
      * @param x 受到的攻击，包含发出攻击对象的uuid和攻击的val。
     */
-    public beAttackedForPlayer (x: {uuid: string, val: number}): void {
+    public beAttacked (x: {uuid: string, val: number}): void {
         /**敌人攻击减玩家的防御的值 */
         const atkMinusDef = x.val - this.def
         if (atkMinusDef > 0) {
@@ -718,16 +678,18 @@ class Player {
         }
     }
     /**玩家死亡 */
-    private die () {}
-
-    private addProgress: Stage['addProgress']
+    public die () {}
 
     private controlBox = {
         [_AT._PLAYER_CONTROL.SEARCH]: {
             key: _AT._PLAYER_CONTROL.SEARCH,
             ...PLAYER_BOX.control[_AT._PLAYER_CONTROL.SEARCH],
             func: () => {
-                this.addProgress(this.uuid)
+                if (this.stage) {
+                    this.stage.addProgress(this.uuid)
+                } else {
+                    console.log('no stage, can\'t search.')
+                }
             }
         }
     }
@@ -741,85 +703,82 @@ class Player {
         this.controlBox[key].func()
     }
 
-    public init (x: {
-        pushToTextBox: TextBox['pushToTextBox'],
-        initialValue: Player['hp']['_data']
-    }) {
-        this.hp.init({
-            pushToTextBox: x.pushToTextBox,
-            initialValue: x.initialValue
-        })
-
-        this.itemArray.init({
-            pushToTextBox: x.pushToTextBox
-        })
+    private stage: Stage | undefined
+    public bindStage (stage: Stage) {
+        this.stage = stage
     }
 
-    constructor (x: {
-        hp: number,
-        atk: Player['atk'],
-        def: Player['def'],
-        sans: Player['sans'],
-        addProgress: Player['addProgress']
-    }) {
-        this.hp = new HpForPlayer({
-            totalDataMin: 0,
-            totalDataMax: 20,
-            die: this.die
-        })
+    public init (
+        push: TextBox['push'],
+        initialValue: Player['hp']['_data']
+    ) {
+        this.bindPush(push)
+        this.hp.init(
+            push,
+            initialValue
+        )
+        this.itemArray.init(push)
+    }
+
+    constructor (
+        x: {
+            hp: number,
+            atk: Player['atk'],
+            def: Player['def'],
+            sans: Player['sans']
+        }
+    ) {
+        super()
+
+        this.hp = new HpForPlayer(
+            this,
+            {
+                totalDataMin: 0,
+                totalDataMax: 20
+            }
+        )
         this.atk = x.atk
         this.def = x.def
         this.sans = x.sans
-        this.itemArray = new ItemArray({
-            userUUID: this.uuid
-        })
-        this.addProgress = x.addProgress
+        this.itemArray = new ItemArray(this)
     }
 }
 
-class EnemyGroup {
+class EnemyGroup extends PushTextMod {
     private group: Array<Enemy> = []
-    private spawnEnemy (enemy: Enemy) {
-        const pushToTextBox = this.pushToTextBox
-        if (pushToTextBox) {
-            this.group.splice(0, 0, enemy)
-            this.group[0].init({
-                pushToTextBox: (x) => {
-                    pushToTextBox(x)
+    private spawnEnemy () {
+        if (this.stage) {
+            this.group.splice(0, 0, new Enemy(
+                this.player,
+                this.stage
+            ))
+            this.group[0].init(
+                (text) => {
+                    this.pushText(text)
                 },
-                initialHp: randomInitialValue(LIMIT.enemy.hp.min, LIMIT.enemy.hp.max, LIMIT.enemy.hp.percent),
-                initialNoise: randomInitialValue(LIMIT.enemy.noise.min, LIMIT.enemy.noise.max, LIMIT.enemy.noise.percent),
-                initialSmell: randomInitialValue(LIMIT.enemy.smell.min, LIMIT.enemy.smell.max, LIMIT.enemy.smell.percent)
-            })
+                {
+                    initialHp: randomInitialValue(LIMIT.enemy.hp.min, LIMIT.enemy.hp.max, LIMIT.enemy.hp.percent),
+                    initialNoise: randomInitialValue(LIMIT.enemy.noise.min, LIMIT.enemy.noise.max, LIMIT.enemy.noise.percent),
+                    initialSmell: randomInitialValue(LIMIT.enemy.smell.min, LIMIT.enemy.smell.max, LIMIT.enemy.smell.percent)
+                }
+            )
         } else {
-            console.log('EnemyGroup\'s pushToTextBox undefined, spawnEnemy fail.')
+            console.log('no stage or no textBox. can\'t spawnEnemy.')
         }
-        
     }
 
-    /** 推送文本的方法 */
-    private pushToTextBox: { (str: string): void } | undefined
-    /**绑定pushToTextBox方法 */
-    protected bindPushToTextBox (pushToTextBox: TextBox['pushToTextBox']) {
-        this.pushToTextBox = pushToTextBox
+    private stage: Stage | undefined
+    public bindStage (stage: Stage) {
+        this.stage = stage
     }
-    /** 改变场景气味的方法 */
-    private setStageSmell: { (x: {uuid: string, val: number}):void }
-    /** 改变场景噪声的方法 */
-    private setStageNoise: { (x: {uuid: string, val: number}):void }
-    /**玩家被攻击的处理方法 */
-    private beAttackedForPlayer: {(x: {uuid: string, val: number}): void}
+    private player: Player
 
     private _enemyRate = randomInitialValue(LIMIT.enemy.rate.min, LIMIT.enemy.rate.max, LIMIT.enemy.rate.percent)
     /** 当该值变化时，检查该值是否达到生成敌人的临界点，如果达到且敌人数量未达到上限，生成敌人并加入。 */
     private set enemyRate (val: number) {
         this._enemyRate = val
         if (this._enemyRate >= LIMIT.enemy.rate.max && this.group.length < LIMIT.enemy.amount.max) {
-            this.spawnEnemy(new Enemy({
-                setStageSmell: this.setStageSmell,
-                setStageNoise: this.setStageNoise,
-                beAttackedForPlayer: this.beAttackedForPlayer
-            }))
+            this.spawnEnemy()
         }
     }
     private get enemyRate () {
@@ -885,24 +844,19 @@ class EnemyGroup {
                     break
             }
         } else {
-            this.addEnemyRate(10)
+            this.addEnemyRate(randomPlusValue(LIMIT.enemy.rate.min, LIMIT.enemy.rate.max, LIMIT.enemy.rate.eachPercent))
         }
     }
 
-    public init (x:{pushToTextBox: EnemyGroup['pushToTextBox']}) {
-        this.pushToTextBox = x.pushToTextBox
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
     }
 
-    constructor (x: {
-        pushToTextBox: EnemyGroup['pushToTextBox'],
-        setStageSmell: EnemyGroup['setStageSmell'],
-        setStageNoise: EnemyGroup['setStageNoise'],
-        beAttackedForPlayer: EnemyGroup['beAttackedForPlayer']
-    }) {
-        this.pushToTextBox = x.pushToTextBox
-        this.setStageSmell = x.setStageSmell
-        this.setStageNoise = x.setStageNoise
-        this.beAttackedForPlayer = x.beAttackedForPlayer
+    constructor (
+        player: Player
+    ) {
+        super()
+        this.player = player
     }
 }
 
@@ -910,34 +864,36 @@ class EnemyGroup {
 class HpForEnemy extends BasicDataForHP {
     private enemyType: Enemy['enemyType']
     protected _data: BasicData['_data'] = 0
+    protected user: BasicDataForHP['user']
     protected totalDataMin: BasicData['totalDataMin']
     protected totalDataMax: BasicData['totalDataMax']
     protected whenDataChange: BasicData['whenDataChange'] = (newVal, curVal) => {
         if (newVal > 0) {
             if (newVal > curVal) {
-                this.write(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
+                this.pushText(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
             }
     
             if (newVal < curVal) {
-                this.write(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
+                this.pushText(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
             }
         } else {
-            this.write(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
+            this.pushText(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
         }
     }
-    protected die: BasicDataForHP['die']
     
-    constructor (x: {
-        enemyType: HpForEnemy['enemyType'],
-        totalDataMin: BasicDataForHP['totalDataMin'],
-        totalDataMax: BasicDataForHP['totalDataMax'],
-        die: BasicDataForHP['die']
-    }) {
+    constructor (
+        user: Enemy,
+        x: {
+            enemyType: HpForEnemy['enemyType'],
+            totalDataMin: BasicDataForHP['totalDataMin'],
+            totalDataMax: BasicDataForHP['totalDataMax']
+        }
+    ) {
         super()
+        this.user = user
         this.enemyType = x.enemyType
         this.totalDataMin = x.totalDataMin
         this.totalDataMax = x.totalDataMax
-        this.die = x.die
     }
 }
 
@@ -954,24 +910,26 @@ class BasicDataForENS extends BasicData {
         const sample = ENEMY_BOX[this.enemyType].data[this.enemyDataType]
         if (newVal > 0) {
             if (newVal > curVal) {
-                this.write(randomEFA(sample[_AT._DATA_STATE.INCREASE]))
+                this.pushText(randomEFA(sample[_AT._DATA_STATE.INCREASE]))
             }
     
             if (newVal < curVal) {
-                this.write(randomEFA(sample[_AT._DATA_STATE.DECREASE]))
+                this.pushText(randomEFA(sample[_AT._DATA_STATE.DECREASE]))
             }
         } else {
-            this.write(randomEFA(sample[_AT._DATA_STATE.ZERO]))
+            this.pushText(randomEFA(sample[_AT._DATA_STATE.ZERO]))
         }
     }
 
-    constructor (x: {
-        enemyType: BasicDataForENS['enemyType'],
-        enemyDataType: BasicDataForENS['enemyDataType'],
-        enemyUUID: string,
-        totalDataMin: BasicDataForENS['totalDataMin'],
-        totalDataMax: BasicDataForENS['totalDataMax'],
-    }) {
+    constructor (
+        x: {
+            enemyType: BasicDataForENS['enemyType'],
+            enemyDataType: BasicDataForENS['enemyDataType'],
+            enemyUUID: string,
+            totalDataMin: BasicDataForENS['totalDataMin'],
+            totalDataMax: BasicDataForENS['totalDataMax'],
+        }
+    ) {
         super()
         this.enemyType = x.enemyType
         this.enemyDataType = x.enemyDataType
@@ -986,10 +944,12 @@ class Enemy {
     private readonly enemyType: _AT._ENEMY_TYPE = randomEnumKey(_AT._ENEMY_TYPE)
 
     private readonly atk: number = randomInitialValue(LIMIT.enemy.atk.min, LIMIT.enemy.atk.max, LIMIT.enemy.atk.percent)
-    /**来自Player类的，接收一个攻击数值，计算要减少的hp。该方法在construct里赋值正式方法内容。 */
-    private beAttackedForPlayer: {(x: {uuid: string, val: number}): void}
+
+    private player: Player
+    private stage: Stage
+
     public attackPlayer () {
-        this.beAttackedForPlayer({
+        this.player.beAttacked({
             uuid: this.uuid,
             val: this.atk
         })
@@ -1004,6 +964,10 @@ class Enemy {
             uuid: this.uuid,
             val: randomInitialValue(LIMIT.enemy.noise.min, LIMIT.enemy.noise.max, LIMIT.enemy.noise.percent)
         })
+        this.stage.setNoise({
+            uuid: this.uuid,
+            val: this.noise.getVal()
+        })
     }
     private smell: BasicDataForENS
     /**敌人散发随机气味（该值为累计赋值）*/
@@ -1011,6 +975,10 @@ class Enemy {
         this.smell.plusExtendData({
             uuid: this.uuid,
             val: randomPlusValue(LIMIT.enemy.smell.min, LIMIT.enemy.smell.max, LIMIT.enemy.smell.eachPercent)
+        })
+        this.stage.addSmell({
+            uuid: this.uuid,
+            val: this.smell.getVal()
         })
     }
 
@@ -1029,89 +997,63 @@ class Enemy {
     }
 
     /**敌人死亡 */
-    private die () {
+    public die () {
         this.noise.removeExtendData(this.uuid)
     }
 
-    /**推送文字的方法 */
-    private pushToTextBox: TextBox['pushToTextBox'] | undefined
-    /**绑定pushToTextBox方法 */
-    private bindPushToTextBox (pushToTextBox: TextBox['pushToTextBox']) {
-        this.pushToTextBox = pushToTextBox
-    }
-    /**写文字（就是pushToTextBox套一层判断而已） */
-    private write (text: string) {
-        if (this.pushToTextBox) {
-            this.pushToTextBox(text)
-        } else {
-            console.log('pushToTextBox undefine')
+    public init (
+        push: TextBox['push'],
+        x: {
+            initialHp: number,
+            initialNoise: number,
+            initialSmell: number
         }
+    ) {
+        console.log('msg from enemy init')
+        this.hp.init(push, x.initialHp)
+
+        this.noise.init(push, x.initialNoise)
+
+        this.smell.init(push, x.initialSmell)
     }
 
-    public init (x: {
-        pushToTextBox: TextBox['pushToTextBox'],
-        initialHp: number,
-        initialNoise: number,
-        initialSmell: number
-    }) {
-        this.hp.init({
-            pushToTextBox: (text) => {
-                x.pushToTextBox(text)
-            },
-            initialValue: x.initialHp
-        })
+    constructor (
+        player: Player,
+        stage: Stage
+    ) {
+        this.player = player
+        this.stage = stage
 
-        this.noise.init({
-            pushToTextBox: (text) => {
-                x.pushToTextBox(text)
-            },
-            initialValue: x.initialNoise
-        })
-
-        this.smell.init({
-            pushToTextBox: (text) => {
-                x.pushToTextBox(text)
-            },
-            initialValue: x.initialSmell
-        })
-
-        this.bindPushToTextBox((text) => {
-            x.pushToTextBox(text)
-        })
-    }
-
-    constructor (x: {
-        setStageNoise: Stage['setNoise'],
-        setStageSmell: Stage['setSmell'],
-        beAttackedForPlayer: Enemy['beAttackedForPlayer']
-    }) {
-        this.beAttackedForPlayer = x.beAttackedForPlayer
-        this.hp = new HpForEnemy({
-            enemyType: this.enemyType,
-            totalDataMin: LIMIT.enemy.hp.min,
-            totalDataMax: LIMIT.enemy.hp.max,
-            die: () => {
-                this.die()
+        this.hp = new HpForEnemy(
+            this,
+            {
+                enemyType: this.enemyType,
+                totalDataMin: LIMIT.enemy.hp.min,
+                totalDataMax: LIMIT.enemy.hp.max
             }
-        })
+        )
 
         const paramsForNoiseAndSmell = {
             enemyType: this.enemyType,
             enemyUUID: this.uuid
         }
 
-        this.noise = new BasicDataForENS({
-            ...paramsForNoiseAndSmell,
-            totalDataMin: LIMIT.enemy.noise.min,
-            totalDataMax: LIMIT.enemy.noise.max,
-            enemyDataType: _AT._ENEMY_DATA.NOISE
-        })
-        this.smell = new BasicDataForENS({
-            ...paramsForNoiseAndSmell,
-            totalDataMin: LIMIT.enemy.smell.min,
-            totalDataMax: LIMIT.enemy.smell.max,
-            enemyDataType: _AT._ENEMY_DATA.SMELL
-        })
+        this.noise = new BasicDataForENS(
+            {
+                ...paramsForNoiseAndSmell,
+                totalDataMin: LIMIT.enemy.noise.min,
+                totalDataMax: LIMIT.enemy.noise.max,
+                enemyDataType: _AT._ENEMY_DATA.NOISE
+            }
+        )
+        this.smell = new BasicDataForENS(
+            {
+                ...paramsForNoiseAndSmell,
+                totalDataMin: LIMIT.enemy.smell.min,
+                totalDataMax: LIMIT.enemy.smell.max,
+                enemyDataType: _AT._ENEMY_DATA.SMELL
+            }
+        )
     }
 }
 
@@ -1137,25 +1079,15 @@ interface ItemFuncDataWithFunc extends ItemFuncData {
     func: (x?: any) => void
 }
 
-abstract class Item {
+abstract class Item extends PushTextMod {
     /**物品的种类 */
     protected abstract type: _AT._ITEM_TYPE
     public getType () {
         return this.type
     }
-    /**用户的uuid */
-    protected abstract userUUID: string | undefined
 
     /**物品的状态 */
     protected state: _AT._ITEM_USE_STATE = _AT._ITEM_USE_STATE.NEW
-    /**同时设置道具的使用者和道具的状态 */
-    public setUserAndState (x: {
-        userUUID: Item['userUUID'],
-        state: Item['state']
-    }) {
-        this.userUUID = this.userUUID
-        this.state = x.state
-    }
     public getState () {
         return this.state
     }
@@ -1171,12 +1103,18 @@ abstract class Item {
         const newVal = x
         const curVal = this._dur
         this._dur = newVal
+
         if (newVal <= 0) {
-            this.removeItself({
-                uuid: this.uuid,
-                state: _AT._ITEM_USE_STATE.USED
-            })
+            if (this.user) {
+                this.user.removeItem({
+                    uuid: this.uuid,
+                    state: _AT._ITEM_USE_STATE.USED
+                })
+            } else {
+                console.log('no user, can\'t be used')
+            }
         }
+        
         this.whenDurChange(newVal, curVal)
     }
     protected get dur () {
@@ -1187,34 +1125,30 @@ abstract class Item {
         [index: number]: ItemFuncDataWithFunc
     }
     /**使用道具的某个功能 */
-    public use (funcKey: number ) {
+    public use (funcKey: number) {
         this.funcBox[funcKey].func()
     }
     /**获取可用道具功能合集 */
     public abstract getFuncArray: () => Array<ItemFuncData>
-    /**ItemArray删除道具的功能，删除道具的相关文字提示在ItemArray类里执行，因为道具的移除以在ItemArray里去除为准。 */
-    protected abstract removeItself: ItemArray['removeItem']
-    /**推送文字的方法 */
-    private pushToTextBox: TextBox['pushToTextBox'] | undefined
-    /**绑定pushToTextBox方法 */
-    protected bindPushToTextBox (pushToTextBox: TextBox['pushToTextBox']) {
-        this.pushToTextBox = pushToTextBox
-    }
-    /**写文字（就是pushToTextBox套一层判断而已） */
-    protected write (text: string) {
-        if (this.pushToTextBox) {
-            this.pushToTextBox(text)
-        } else {
-            console.log('pushToTextBox undefine')
-        }
-    }
+
     /**其他可能需要在dur变化时触发的脚本写在这里面 */
     protected abstract whenDurChange: (newVal: Item['_dur'], curVal: Item['_dur']) => void
 
-    public init (x: {
-        pushToTextBox: TextBox['pushToTextBox']
+    protected user: Player | undefined
+    public bindUser (user: Player) {
+        this.user = user
+    }
+    /**同时设置道具的使用者和道具的状态 */
+    public setUserAndState (x: {
+        user: Player | undefined,
+        state: Item['state']
     }) {
-        this.bindPushToTextBox(x.pushToTextBox)
+        this.user = x.user
+        this.state = x.state
+    }
+
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
     }
 }
 
@@ -1230,8 +1164,8 @@ class Flashlight extends Item {
             this.dur = this.dur - 1
         }
     }
-    private setStageLight: Stage['setLight']
-    private removeStageLight: Stage['removeLight']
+
+    private stage: Stage
 
     protected funcBox: Item['funcBox'] = {
         [_AT._FLASHLIGHT_FUNC.ON]: {
@@ -1239,8 +1173,8 @@ class Flashlight extends Item {
             key: _AT._FLASHLIGHT_FUNC.ON,
             ...ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.ON],
             func: () => {
-                this.write(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.ON].describe)
-                this.setStageLight({
+                this.pushText(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.ON].describe)
+                this.stage.setLight({
                     uuid: this.uuid,
                     val: 6
                 })
@@ -1252,8 +1186,8 @@ class Flashlight extends Item {
             key: _AT._FLASHLIGHT_FUNC.OFF,
             ...ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.OFF],
             func: () => {
-                this.write(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.OFF].describe)
-                this.removeStageLight(this.uuid)
+                this.pushText(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.OFF].describe)
+                this.stage.removeLight(this.uuid)
                 this.ifOn = false
             }
         }
@@ -1271,30 +1205,24 @@ class Flashlight extends Item {
         return res
     }
 
-    protected userUUID: Item['userUUID']
-    protected removeItself: Item['removeItself']
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
+    }
 
-    constructor (x: {
-        setStageLight: Flashlight['setStageLight'],
-        removeStageLight: Flashlight['removeStageLight'],
-        removeItself: Flashlight['removeItself']
-    }) {
+    constructor (
+        stage: Stage,
+    ) {
         super()
-        this.setStageLight = x.setStageLight
-        this.removeStageLight = x.removeStageLight
-        this.removeItself = x.removeItself
+        this.stage = stage
     }
 }
 
 class Sword extends Item {
     protected type: Item['type'] = _AT._ITEM_TYPE.SWORD
-    protected userUUID: Item['userUUID']
     private atk: number = 6
 
-    private getIfHaveEnemy: EnemyGroup['getIfHaveEnemy']
-    private beAttackedForEnemy: EnemyGroup['beAttacked']
-    
-    protected removeItself: Item['removeItself']
+    private enemyGroup: EnemyGroup
+
     protected whenDurChange: Item['whenDurChange'] = () => {}
     protected _dur: Item['_dur'] = 6
     protected funcBox: Item['funcBox'] = {
@@ -1303,10 +1231,10 @@ class Sword extends Item {
             key: _AT._SWORD_FUNC.ATTACK,
             ...ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK],
             func: (val: Player['atk']) => {
-                if (this.userUUID && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
-                    this.write(ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK].describe)
-                    this.beAttackedForEnemy ({
-                        uuid: this.userUUID,
+                if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
+                    this.pushText(ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK].describe)
+                    this.enemyGroup.beAttacked({
+                        uuid: this.user.getUUID(),
                         val: val + this.atk
                     })
 
@@ -1320,32 +1248,31 @@ class Sword extends Item {
 
         const {func, ...attack} = this.funcBox[_AT._SWORD_FUNC.ATTACK]
 
-        if (this.userUUID && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0 && this.getIfHaveEnemy()) {
+        if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0 && this.enemyGroup.getIfHaveEnemy()) {
             res.splice(0, 0, attack)
         }
 
         return res
     }
 
-    constructor (x: {
-        getIfHaveEnemy: Sword['getIfHaveEnemy']
-        beAttackedForEnemy: Sword['beAttackedForEnemy'],
-        removeItself: Sword['removeItself']
-    }) {
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
+    }
+
+    constructor (
+        enemyGroup: EnemyGroup
+    ) {
         super()
-        this.getIfHaveEnemy = x.getIfHaveEnemy
-        this.beAttackedForEnemy = x.beAttackedForEnemy
-        this.removeItself = x.removeItself
+        this.enemyGroup = enemyGroup
     }
 }
 
 class Gun extends Item {
     protected type: Item['type'] = _AT._ITEM_TYPE.GUN
-    protected userUUID: Item['userUUID']
+
     private atk: number = 20
-    private getIfHaveEnemy: EnemyGroup['getIfHaveEnemy']
-    private beAttackedForEnemy: Enemy['beAttacked']
-    protected removeItself: Item['removeItself']
+    private enemyGroup: EnemyGroup
+
     protected whenDurChange: Item['whenDurChange'] = () => {}
     protected _dur: Item['_dur'] = 0
     protected funcBox: Item['funcBox'] = {
@@ -1354,10 +1281,10 @@ class Gun extends Item {
             key: _AT._GUN_FUNC.SHOOT,
             ...ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT],
             func: () => {
-                if (this.userUUID && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
-                    this.write(ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT].describe)
-                    this.beAttackedForEnemy ({
-                        uuid: this.userUUID,
+                if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
+                    this.pushText(ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT].describe)
+                    this.enemyGroup.beAttacked({
+                        uuid: this.user.getUUID(),
                         val: this.atk
                     })
 
@@ -1372,22 +1299,22 @@ class Gun extends Item {
 
         const {func, ...shoot} = this.funcBox[_AT._GUN_FUNC.SHOOT]
 
-        if (this.userUUID && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0 && this.getIfHaveEnemy()) {
+        if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0 && this.enemyGroup.getIfHaveEnemy()) {
             res.splice(0, 0, shoot)
         }
 
         return res
     }
 
-    constructor (x: {
-        getIfHaveEnemy: Gun['getIfHaveEnemy'],
-        beAttackedForEnemy: Gun['beAttackedForEnemy'],
-        removeItself: Gun['removeItself'],
-    }) {
+    public init (push: TextBox['push']) {
+        this.bindPush(push)
+    }
+
+    constructor (
+        enemyGroup: EnemyGroup
+    ) {
         super()
-        this.getIfHaveEnemy = x.getIfHaveEnemy
-        this.beAttackedForEnemy = x.beAttackedForEnemy
-        this.removeItself = x.removeItself
+        this.enemyGroup = enemyGroup
     }
 }
 
@@ -1418,59 +1345,34 @@ export class Playground { // 包含整个游戏所有内容的总控制
         let res: Item
         switch (type) {
             case _AT._ITEM_TYPE.FLASHLIGHT: {
-                res = new Flashlight({
-                    setStageLight: (x) => {
-                        this.stage.setLight(x)
-                    },
-                    removeStageLight: (x) => {
-                        this.stage.removeLight(x)
-                    },
-                    removeItself: (x) => {
-                        this.player.removeItem(x)
-                    }
-                })
+                res = new Flashlight(
+                    this.stage
+                )
                 break
             }
             case _AT._ITEM_TYPE.SWORD: {
-                res = new Sword({
-                    getIfHaveEnemy: () => {
-                        return this.enemyGroup.getIfHaveEnemy()
-                    },
-                    beAttackedForEnemy: (x) => {
-                        this.enemyGroup.beAttacked(x)
-                    },
-                    removeItself: (x) => {
-                        this.player.removeItem(x)
-                    }
-                })
+                res = new Sword(
+                    this.enemyGroup
+                )
                 break
             }
             case _AT._ITEM_TYPE.GUN: {
-                res = new Gun({
-                    getIfHaveEnemy: () => {
-                        return this.enemyGroup.getIfHaveEnemy()
-                    },
-                    beAttackedForEnemy: (x) => {
-                        this.enemyGroup.beAttacked(x)
-                    },
-                    removeItself: (x) => {
-                        this.player.removeItem(x)
-                    }
-                })
+                res = new Gun(
+                    this.enemyGroup
+                )
                 break
             }
         }
 
-        res.init({
-            pushToTextBox: (x) => {
-                this.textBox.pushToTextBox(x)
-            }
-        })
-
         return res
     }
 
-    /** 模拟生成随机道具并被玩家获取 */
+    /**处理刷新敌人的进度 */
+    private enemyAction () {
+        this.enemyGroup.randomAction()
+    }
+
+    /**模拟生成随机道具并被玩家获取 */
     private addRandomItemToPlayer () {
         const itemType: _AT._ITEM_TYPE = randomEnumKey(_AT._ITEM_TYPE)
         let item: Item = this.itemCreator(itemType)
@@ -1519,11 +1421,14 @@ export class Playground { // 包含整个游戏所有内容的总控制
         }
     }
 
+    /**游戏的回合 */
     private _round: number = 0
     private set round (x: number) {
         console.log('round ===>', x)
         this._round = x
-        this.addRandomItemToPlayer()
+        if (this.player.getPlayerItemAmount() < 3 && Math.random() > 0.75 && this.stage.getIfProgressUpgrade() === false) {
+            this.addRandomItemToPlayer()
+        }
     }
     private get round () {
         return this._round
@@ -1535,22 +1440,19 @@ export class Playground { // 包含整个游戏所有内容的总控制
     }
 
     public init () {
-        this.player.init({
-            pushToTextBox: (text) => {
-                this.textBox.pushToTextBox(text)
+        this.player.init(
+            (text) => {
+                this.textBox.push(text)
             },
-            initialValue: this.playerData.hp
-        })
-
+            this.playerData.hp
+        )
+        this.player.bindStage(this.stage)
         this.stage.init((text) => {
-            this.textBox.pushToTextBox(text)
-        })
-
-        this.enemyGroup.init({
-            pushToTextBox: (text) => {
-                this.textBox.pushToTextBox(text)
-            }
-        })
+            this.textBox.push(text)
+        },)
+        this.enemyGroup.init((text) => {
+            this.textBox.push(text)
+        },)
     }
 
     constructor(x: {
@@ -1560,30 +1462,12 @@ export class Playground { // 包含整个游戏所有内容的总控制
         sans: Player['sans']
     }) {
         this.playerData = x
-        this.player = new Player({
-            ...x,
-            addProgress: (x) => {
-                this.stage.addProgress(x)
-            }
-        })
+        this.player = new Player(x)
 
-        this.stage = new Stage({
-            stageState: _AT._STAGE_STATE.START
-        })
+        this.stage = new Stage(
+            _AT._STAGE_STATE.START
+        )
 
-        this.enemyGroup = new EnemyGroup({
-            pushToTextBox: (x) => {
-                this.textBox.pushToTextBox(x)
-            },
-            setStageNoise: (x) => {
-                this.stage.setNoise(x)
-            },
-            setStageSmell: (x) => {
-                this.stage.setSmell(x)
-            },
-            beAttackedForPlayer: (x) => {
-                this.enemyGroup.beAttacked(x)
-            }
-        })
+        this.enemyGroup = new EnemyGroup(this.player)
     }
 }
