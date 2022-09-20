@@ -50,7 +50,7 @@ class TextBox {
     public textArray: Array<string> = []
 
     public push (text: string | null) {
-        console.log('text from push ==>', text)
+        console.log('text from push of textBox ==>', text)
         if (text) {
             this.textArray.splice(0 , 0, text)
         } else {
@@ -62,28 +62,12 @@ class TextBox {
     }
 }
 
-class PushTextMod {
-    /**推送文字的方法 */
-    protected push: TextBox['push'] | undefined
-    public bindPush (push: TextBox['push']) {
-        console.log('msg from bindPush')
-        this.push = push
-    }
-    protected pushText (text: string | null) {
-        if(this.push) {
-            this.push(text)
-        } else {
-            console.log('no textBox, can\'t write.', text)
-        }
-    }
-}
-
 /**场景的基础属性的类
  * 这类属性有基础、扩展和合计，基础+扩展=合计
  * 扩展的值的变化触发合计的值的变化
  * 合计的值的变化触发相关描述文字的变化
  */
-abstract class BasicData extends PushTextMod {
+abstract class BasicData {
     /**记录数据是否是新的，从而判断数据按新的或旧的来生成描述文字。 */
     protected ifDataNew: boolean = true
     protected abstract _data: number
@@ -95,9 +79,8 @@ abstract class BasicData extends PushTextMod {
     protected get data () {
         return this._data
     }
-    public init (push: TextBox['push'], initialValue: number) {
-        this.bindPush(push)
-        this.data = initialValue
+    public setVal (v: number) {
+        this.data = v
     }
     /**获取属性的值 */
     public getVal () {
@@ -106,7 +89,7 @@ abstract class BasicData extends PushTextMod {
 
     /**获取属性的好坏比率（超过上下限中间值的就是好，否则就是坏） */
     public getConditionRate () {
-        return this.data / ((this.totalDataMax - this.totalDataMin) / 2)
+        return this.totalData / ((this.totalDataMax - this.totalDataMin) / 2)
     }
 
     protected _extendData: Array<{uuid: string, val: number}> = []
@@ -144,7 +127,6 @@ abstract class BasicData extends PushTextMod {
      * */
     public plusExtendData (x: {uuid: string, val: number}) {
         console.log('x from setExtendData ===>', x)
-
         const temp = this.extendData
         const index = temp.findIndex((ele) => {
             return ele.uuid === x.uuid
@@ -229,6 +211,12 @@ abstract class BasicData extends PushTextMod {
     * @param curVal 当前记录的属性的等级
     */
     protected abstract readonly whenDataChange: (newVal: number, curVal: number) => void
+    /**推送文字的方法 */
+    protected textBox: TextBox
+
+    constructor (textBox: TextBox) {
+        this.textBox = textBox
+    }
 }
 
 
@@ -287,19 +275,20 @@ class BasicDataForSLSN extends BasicData {
         let newLevel: _AT._STAGE_DATA_LEVEL = this.calLevel(newVal)
         let currentLevel: _AT._STAGE_DATA_LEVEL = this.calLevel(curVal)
         if (this.ifDataNew) { // 检查是否是新开的场景，如果是新开的场景，使用完整描述句式。
-            this.pushText(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.NEW][newLevel]))
+            this.textBox.push(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.NEW][newLevel]))
             this.ifDataNew = false
         } else {
             if (newLevel > currentLevel) {
-                this.pushText(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.INCREASE][newLevel]))
+                this.textBox.push(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.INCREASE][newLevel]))
             }
             if (newLevel < currentLevel) {
-                this.pushText(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.DECREASE][newLevel]))
+                this.textBox.push(randomEFA(STAGE_BOX[this.stageType].data[this.stageDataType][_AT._STAGE_DATA_STATE.DECREASE][newLevel]))
             }
         }
     }
 
     constructor (
+        textBox: TextBox,
         x: {
             stageDataType: BasicDataForSLSN['stageDataType'],
             totalDataMin: BasicData['totalDataMin'],
@@ -307,7 +296,7 @@ class BasicDataForSLSN extends BasicData {
             stageType: ReturnType<Stage['getStageType']>
         }
     ) {
-        super()
+        super(textBox)
         this.stageDataType = x.stageDataType
         this.totalDataMin = x.totalDataMin
         this.totalDataMax = x.totalDataMax
@@ -348,37 +337,35 @@ class ProgressForStage extends BasicData {
     protected totalDataMax: BasicData['totalDataMax']
     /**生成文字 */
     protected whenDataChange: BasicData['whenDataChange'] = (newVal: number, curVal: number) => {
+        console.log('newVal from progress ===>', newVal)
         if (curVal === 0) {
-            this.pushText(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][_AT._DETECT_STATE.START]))
+            this.textBox.push(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][_AT._DETECT_STATE.START]))
         } else {
             const newState: _AT._DETECT_STATE = this.calStateForProgress(newVal)
             const curState: _AT._DETECT_STATE = this.calStateForProgress(curVal)
 
             const res: _AT._DETECT_STATE = newState === curState ? _AT._DETECT_STATE.CONTINUE : newState
             console.log('stageType ===>', this.stageType, 'detectType ===>', this.detectType, 'res ===>', res)
-            this.pushText(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][res]))
+            this.textBox.push(randomEFA(STAGE_BOX[this.stageType].detect[this.detectType][res]))
         }
     }
 
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
-    }
-
     constructor (
+        textBox: TextBox,
         x: {
             totalDataMin: ProgressForStage['totalDataMin'],
             totalDataMax: ProgressForStage['totalDataMax'],
             stageType: ProgressForStage['stageType']
         }
     ) {
-        super()
+        super(textBox)
         this.totalDataMin = x.totalDataMin
         this.totalDataMax = x.totalDataMax
         this.stageType = x.stageType
     }
 }
 
-class Stage extends PushTextMod {
+class Stage {
     private stageType: _AT._STAGE_TYPE = randomEnumKey(_AT._STAGE_TYPE)
     public getStageType (): _AT._STAGE_TYPE {
         return this.stageType
@@ -454,35 +441,29 @@ class Stage extends PushTextMod {
     public getIfProgressUpgrade () {
         return this.progress.getIfProgressUpgrade()
     }
+
+    private textBox: TextBox
     
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
-    
-        this.light.init(
-            push,
-            randomInitialValue(LIMIT.stage.light.min, LIMIT.stage.light.max, LIMIT.stage.light.percent)
-        )
+    public init () {
+        this.textBox.push(randomEFA(STAGE_BOX[this.stageType].state[this.stageState]))
 
-        this.smell.init(
-            push,
-            randomInitialValue(LIMIT.stage.smell.min, LIMIT.stage.smell.max, LIMIT.stage.smell.percent)
-        )
+        this.light.setVal(randomInitialValue(LIMIT.stage.light.min, LIMIT.stage.light.max, LIMIT.stage.light.percent))
 
-        this.noise.init(
-            push,
-            randomInitialValue(LIMIT.stage.noise.min, LIMIT.stage.noise.max, LIMIT.stage.noise.percent)
-        )
+        this.smell.setVal(randomInitialValue(LIMIT.stage.smell.min, LIMIT.stage.smell.max, LIMIT.stage.smell.percent))
 
-        this.progress.init(push)
+        this.noise.setVal(randomInitialValue(LIMIT.stage.noise.min, LIMIT.stage.noise.max, LIMIT.stage.noise.percent))
     }
 
     constructor (
+        textBox: TextBox,
         stageState: _AT._STAGE_STATE
     ) {
-        super()
+        this.textBox = textBox
+
         this.stageState = stageState
     
         this.light = new BasicDataForSLSN(
+            textBox,
             {
                 stageDataType: _AT._STAGE_DATA.LIGHT,
                 totalDataMin: 0,
@@ -491,6 +472,7 @@ class Stage extends PushTextMod {
             }
         )
         this.smell = new BasicDataForSLSN(
+            textBox,
             {
                 stageDataType: _AT._STAGE_DATA.SMELL,
                 totalDataMin: 0,
@@ -499,6 +481,7 @@ class Stage extends PushTextMod {
             }
         )
         this.noise = new BasicDataForSLSN(
+            textBox,
             {
                 stageDataType: _AT._STAGE_DATA.NOISE,
                 totalDataMin: 0,
@@ -507,6 +490,7 @@ class Stage extends PushTextMod {
             }
         )
         this.progress = new ProgressForStage(
+            textBox,
             {
                 totalDataMin: 0,
                 totalDataMax: 80,
@@ -517,7 +501,7 @@ class Stage extends PushTextMod {
 }
 
 /**玩家或者敌人的道具数据类 */
-class ItemArray extends PushTextMod {
+class ItemArray {
     private user: Player
     private itemArray: Array<Item> = []
     public getItemAmount () {
@@ -539,14 +523,11 @@ class ItemArray extends PushTextMod {
 
     public addItem (item: Item) {
         this.itemArray.splice(0, 0, item)
-        this.itemArray[0].init((text) => {
-            this.pushText(text)
-        })
         this.itemArray[0].setUserAndState({
             user: this.user,
             state: _AT._ITEM_USE_STATE.ADDED
         })
-        this.pushText(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[this.itemArray[0].getState()]))
+        this.textBox.push(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[this.itemArray[0].getState()]))
     }
 
     public removeItem (x: {uuid: string, state: _AT._ITEM_USE_STATE}) {
@@ -560,7 +541,7 @@ class ItemArray extends PushTextMod {
                 user: this.user,
                 state: _AT._ITEM_USE_STATE.REMOVED
             })
-            this.pushText(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[removedItem.getState()]))
+            this.textBox.push(randomEFA(ITEM_BOX[this.itemArray[0].getType()].state[removedItem.getState()]))
         } else {
             console.log('removeItem faile, can\'t find item')
         }
@@ -578,14 +559,13 @@ class ItemArray extends PushTextMod {
         }
     }
 
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
-    }
+    private textBox: TextBox
 
     constructor (
+        textBox: TextBox,
         user: Player,
     ) {
-        super()
+        this.textBox = textBox
         this.user = user
     }
 }
@@ -599,33 +579,34 @@ class HpForPlayer extends BasicDataForHP {
         if (curVal > 0) {
             if (newVal > 0) {
                 if (newVal > curVal) {
-                    this.pushText(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
+                    this.textBox.push(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
                 }
         
                 if (newVal < curVal) {
-                    this.pushText(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
+                    this.textBox.push(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
                 }
             } else {
-                this.pushText(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
+                this.textBox.push(randomEFA(PLAYER_BOX.data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
             }
         }
     }
     
     constructor (
+        textBox: TextBox,
         user: Player,
         x: {
             totalDataMin: BasicDataForHP['totalDataMin'],
             totalDataMax: BasicDataForHP['totalDataMax'],
         }
     ) {
-        super()
+        super(textBox)
         this.user = user
         this.totalDataMin = x.totalDataMin
         this.totalDataMax = x.totalDataMax
     }
 }
 
-class Player extends PushTextMod {
+class Player {
     private uuid: string = crypto.randomUUID()
     public getUUID () {
         return this.uuid
@@ -685,6 +666,7 @@ class Player extends PushTextMod {
             key: _AT._PLAYER_CONTROL.SEARCH,
             ...PLAYER_BOX.control[_AT._PLAYER_CONTROL.SEARCH],
             func: () => {
+                this.textBox.push('bbb')
                 if (this.stage) {
                     this.stage.addProgress(this.uuid)
                 } else {
@@ -693,34 +675,39 @@ class Player extends PushTextMod {
             }
         }
     }
+
+    private search () {
+        if (this.stage) {
+            this.stage.addProgress(this.uuid)
+        } else {
+            console.log('no stage, can\'t search.')
+        }
+    }
+
     public getControlBox () {
         const {func: a, ...search} = this.controlBox[_AT._PLAYER_CONTROL.SEARCH]
         let res = [search]
         return res
     }
     public activateControl (key: _AT._PLAYER_CONTROL) {
-        console.log('key ===>', key)
-        this.controlBox[key].func()
+        // this.controlBox[key].func()
+        this.search()
     }
 
-    private stage: Stage | undefined
+    private textBox: TextBox
+    public stage: Stage | undefined
     public bindStage (stage: Stage) {
         this.stage = stage
     }
 
     public init (
-        push: TextBox['push'],
         initialValue: Player['hp']['_data']
     ) {
-        this.bindPush(push)
-        this.hp.init(
-            push,
-            initialValue
-        )
-        this.itemArray.init(push)
+        this.hp.setVal(initialValue)
     }
 
     constructor (
+        textBox: TextBox,
         x: {
             hp: number,
             atk: Player['atk'],
@@ -728,9 +715,10 @@ class Player extends PushTextMod {
             sans: Player['sans']
         }
     ) {
-        super()
+        this.textBox = textBox
 
         this.hp = new HpForPlayer(
+            textBox,
             this,
             {
                 totalDataMin: 0,
@@ -740,33 +728,31 @@ class Player extends PushTextMod {
         this.atk = x.atk
         this.def = x.def
         this.sans = x.sans
-        this.itemArray = new ItemArray(this)
+        this.itemArray = new ItemArray(textBox, this)
     }
 }
 
-class EnemyGroup extends PushTextMod {
+class EnemyGroup {
     private group: Array<Enemy> = []
     private spawnEnemy () {
         if (this.stage) {
             this.group.splice(0, 0, new Enemy(
+                this.textBox,
                 this.player,
                 this.stage
             ))
-            this.group[0].init(
-                (text) => {
-                    this.pushText(text)
-                },
-                {
-                    initialHp: randomInitialValue(LIMIT.enemy.hp.min, LIMIT.enemy.hp.max, LIMIT.enemy.hp.percent),
-                    initialNoise: randomInitialValue(LIMIT.enemy.noise.min, LIMIT.enemy.noise.max, LIMIT.enemy.noise.percent),
-                    initialSmell: randomInitialValue(LIMIT.enemy.smell.min, LIMIT.enemy.smell.max, LIMIT.enemy.smell.percent)
-                }
-            )
+            this.group[0].init({
+                initialHp: randomInitialValue(LIMIT.enemy.hp.min, LIMIT.enemy.hp.max, LIMIT.enemy.hp.percent),
+                initialNoise: randomInitialValue(LIMIT.enemy.noise.min, LIMIT.enemy.noise.max, LIMIT.enemy.noise.percent),
+                initialSmell: randomInitialValue(LIMIT.enemy.smell.min, LIMIT.enemy.smell.max, LIMIT.enemy.smell.percent)
+            })
         } else {
-            console.log('no stage or no textBox. can\'t spawnEnemy.')
+            console.log('no stage. can\'t spawnEnemy.')
         }
     }
 
+    /** 推送文本的方法 */
+    private textBox: TextBox
     private stage: Stage | undefined
     public bindStage (stage: Stage) {
         this.stage = stage
@@ -844,18 +830,15 @@ class EnemyGroup extends PushTextMod {
                     break
             }
         } else {
-            this.addEnemyRate(randomPlusValue(LIMIT.enemy.rate.min, LIMIT.enemy.rate.max, LIMIT.enemy.rate.eachPercent))
+            this.addEnemyRate(10)
         }
     }
 
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
-    }
-
     constructor (
+        textBox: TextBox,
         player: Player
     ) {
-        super()
+        this.textBox = textBox
         this.player = player
     }
 }
@@ -870,18 +853,19 @@ class HpForEnemy extends BasicDataForHP {
     protected whenDataChange: BasicData['whenDataChange'] = (newVal, curVal) => {
         if (newVal > 0) {
             if (newVal > curVal) {
-                this.pushText(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
+                this.textBox.push(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.INCREASE]))
             }
     
             if (newVal < curVal) {
-                this.pushText(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
+                this.textBox.push(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.DECREASE]))
             }
         } else {
-            this.pushText(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
+            this.textBox.push(randomEFA(ENEMY_BOX[this.enemyType].data[_AT._PLAYER_DATA.HP][_AT._DATA_STATE.ZERO]))
         }
     }
     
     constructor (
+        textBox: TextBox,
         user: Enemy,
         x: {
             enemyType: HpForEnemy['enemyType'],
@@ -889,7 +873,7 @@ class HpForEnemy extends BasicDataForHP {
             totalDataMax: BasicDataForHP['totalDataMax']
         }
     ) {
-        super()
+        super(textBox)
         this.user = user
         this.enemyType = x.enemyType
         this.totalDataMin = x.totalDataMin
@@ -910,18 +894,19 @@ class BasicDataForENS extends BasicData {
         const sample = ENEMY_BOX[this.enemyType].data[this.enemyDataType]
         if (newVal > 0) {
             if (newVal > curVal) {
-                this.pushText(randomEFA(sample[_AT._DATA_STATE.INCREASE]))
+                this.textBox.push(randomEFA(sample[_AT._DATA_STATE.INCREASE]))
             }
     
             if (newVal < curVal) {
-                this.pushText(randomEFA(sample[_AT._DATA_STATE.DECREASE]))
+                this.textBox.push(randomEFA(sample[_AT._DATA_STATE.DECREASE]))
             }
         } else {
-            this.pushText(randomEFA(sample[_AT._DATA_STATE.ZERO]))
+            this.textBox.push(randomEFA(sample[_AT._DATA_STATE.ZERO]))
         }
     }
 
     constructor (
+        textBox: TextBox,
         x: {
             enemyType: BasicDataForENS['enemyType'],
             enemyDataType: BasicDataForENS['enemyDataType'],
@@ -930,7 +915,7 @@ class BasicDataForENS extends BasicData {
             totalDataMax: BasicDataForENS['totalDataMax'],
         }
     ) {
-        super()
+        super(textBox)
         this.enemyType = x.enemyType
         this.enemyDataType = x.enemyDataType
         this.enemyUUID = x.enemyUUID
@@ -1001,30 +986,32 @@ class Enemy {
         this.noise.removeExtendData(this.uuid)
     }
 
-    public init (
-        push: TextBox['push'],
-        x: {
-            initialHp: number,
-            initialNoise: number,
-            initialSmell: number
-        }
-    ) {
-        console.log('msg from enemy init')
-        this.hp.init(push, x.initialHp)
+    /**推送文字的方法 */
+    private textBox: TextBox
 
-        this.noise.init(push, x.initialNoise)
+    public init (x: {
+        initialHp: number,
+        initialNoise: number,
+        initialSmell: number
+    }) {
+        this.hp.setVal(x.initialHp)
 
-        this.smell.init(push, x.initialSmell)
+        this.noise.setVal(x.initialNoise)
+
+        this.smell.setVal(x.initialSmell)
     }
 
     constructor (
+        textBox: TextBox,
         player: Player,
         stage: Stage
     ) {
+        this.textBox = textBox
         this.player = player
         this.stage = stage
 
         this.hp = new HpForEnemy(
+            textBox,
             this,
             {
                 enemyType: this.enemyType,
@@ -1039,6 +1026,7 @@ class Enemy {
         }
 
         this.noise = new BasicDataForENS(
+            textBox,
             {
                 ...paramsForNoiseAndSmell,
                 totalDataMin: LIMIT.enemy.noise.min,
@@ -1047,6 +1035,7 @@ class Enemy {
             }
         )
         this.smell = new BasicDataForENS(
+            textBox,
             {
                 ...paramsForNoiseAndSmell,
                 totalDataMin: LIMIT.enemy.smell.min,
@@ -1079,7 +1068,7 @@ interface ItemFuncDataWithFunc extends ItemFuncData {
     func: (x?: any) => void
 }
 
-abstract class Item extends PushTextMod {
+abstract class Item {
     /**物品的种类 */
     protected abstract type: _AT._ITEM_TYPE
     public getType () {
@@ -1131,6 +1120,8 @@ abstract class Item extends PushTextMod {
     /**获取可用道具功能合集 */
     public abstract getFuncArray: () => Array<ItemFuncData>
 
+    /**推送文字的方法 */
+    protected textBox: TextBox
     /**其他可能需要在dur变化时触发的脚本写在这里面 */
     protected abstract whenDurChange: (newVal: Item['_dur'], curVal: Item['_dur']) => void
 
@@ -1147,8 +1138,8 @@ abstract class Item extends PushTextMod {
         this.state = x.state
     }
 
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
+    constructor (textBox: TextBox) {
+        this.textBox = textBox
     }
 }
 
@@ -1173,7 +1164,7 @@ class Flashlight extends Item {
             key: _AT._FLASHLIGHT_FUNC.ON,
             ...ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.ON],
             func: () => {
-                this.pushText(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.ON].describe)
+                this.textBox.push(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.ON].describe)
                 this.stage.setLight({
                     uuid: this.uuid,
                     val: 6
@@ -1186,7 +1177,7 @@ class Flashlight extends Item {
             key: _AT._FLASHLIGHT_FUNC.OFF,
             ...ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.OFF],
             func: () => {
-                this.pushText(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.OFF].describe)
+                this.textBox.push(ITEM_BOX[this.type].func[_AT._FLASHLIGHT_FUNC.OFF].describe)
                 this.stage.removeLight(this.uuid)
                 this.ifOn = false
             }
@@ -1205,14 +1196,11 @@ class Flashlight extends Item {
         return res
     }
 
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
-    }
-
     constructor (
+        textBox: TextBox,
         stage: Stage,
     ) {
-        super()
+        super(textBox)
         this.stage = stage
     }
 }
@@ -1232,7 +1220,7 @@ class Sword extends Item {
             ...ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK],
             func: (val: Player['atk']) => {
                 if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
-                    this.pushText(ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK].describe)
+                    this.textBox.push(ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK].describe)
                     this.enemyGroup.beAttacked({
                         uuid: this.user.getUUID(),
                         val: val + this.atk
@@ -1255,14 +1243,11 @@ class Sword extends Item {
         return res
     }
 
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
-    }
-
     constructor (
+        textBox: TextBox,
         enemyGroup: EnemyGroup
     ) {
-        super()
+        super(textBox)
         this.enemyGroup = enemyGroup
     }
 }
@@ -1282,7 +1267,7 @@ class Gun extends Item {
             ...ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT],
             func: () => {
                 if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
-                    this.pushText(ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT].describe)
+                    this.textBox.push(ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT].describe)
                     this.enemyGroup.beAttacked({
                         uuid: this.user.getUUID(),
                         val: this.atk
@@ -1306,14 +1291,11 @@ class Gun extends Item {
         return res
     }
 
-    public init (push: TextBox['push']) {
-        this.bindPush(push)
-    }
-
     constructor (
+        textBox: TextBox,
         enemyGroup: EnemyGroup
     ) {
-        super()
+        super(textBox)
         this.enemyGroup = enemyGroup
     }
 }
@@ -1346,18 +1328,21 @@ export class Playground { // 包含整个游戏所有内容的总控制
         switch (type) {
             case _AT._ITEM_TYPE.FLASHLIGHT: {
                 res = new Flashlight(
+                    this.textBox,
                     this.stage
                 )
                 break
             }
             case _AT._ITEM_TYPE.SWORD: {
                 res = new Sword(
+                    this.textBox,
                     this.enemyGroup
                 )
                 break
             }
             case _AT._ITEM_TYPE.GUN: {
                 res = new Gun(
+                    this.textBox,
                     this.enemyGroup
                 )
                 break
@@ -1367,12 +1352,7 @@ export class Playground { // 包含整个游戏所有内容的总控制
         return res
     }
 
-    /**处理刷新敌人的进度 */
-    private enemyAction () {
-        this.enemyGroup.randomAction()
-    }
-
-    /**模拟生成随机道具并被玩家获取 */
+    /** 模拟生成随机道具并被玩家获取 */
     private addRandomItemToPlayer () {
         const itemType: _AT._ITEM_TYPE = randomEnumKey(_AT._ITEM_TYPE)
         let item: Item = this.itemCreator(itemType)
@@ -1416,6 +1396,7 @@ export class Playground { // 包含整个游戏所有内容的总控制
         if (x.uuid) {
             this.player.useItem(x.uuid, x.key)
         } else {
+            console.log('atC ===>', x.key)
             this.player.activateControl(x.key)
             this.round += 1
         }
@@ -1426,9 +1407,10 @@ export class Playground { // 包含整个游戏所有内容的总控制
     private set round (x: number) {
         console.log('round ===>', x)
         this._round = x
-        if (this.player.getPlayerItemAmount() < 3 && Math.random() > 0.75 && this.stage.getIfProgressUpgrade() === false) {
+        if (this.player.getPlayerItemAmount() < 3 && Math.random() > 0.6 && !this.stage.getIfProgressUpgrade()) {
             this.addRandomItemToPlayer()
         }
+        // this.addRandomItemToPlayer()
     }
     private get round () {
         return this._round
@@ -1440,19 +1422,9 @@ export class Playground { // 包含整个游戏所有内容的总控制
     }
 
     public init () {
-        this.player.init(
-            (text) => {
-                this.textBox.push(text)
-            },
-            this.playerData.hp
-        )
+        this.stage.init()
+        this.player.init(this.playerData.hp)
         this.player.bindStage(this.stage)
-        this.stage.init((text) => {
-            this.textBox.push(text)
-        },)
-        this.enemyGroup.init((text) => {
-            this.textBox.push(text)
-        },)
     }
 
     constructor(x: {
@@ -1462,12 +1434,13 @@ export class Playground { // 包含整个游戏所有内容的总控制
         sans: Player['sans']
     }) {
         this.playerData = x
-        this.player = new Player(x)
+        this.player = new Player(this.textBox, x)
 
         this.stage = new Stage(
+            this.textBox,
             _AT._STAGE_STATE.START
         )
 
-        this.enemyGroup = new EnemyGroup(this.player)
+        this.enemyGroup = new EnemyGroup(this.textBox, this.player)
     }
 }

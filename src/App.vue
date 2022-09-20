@@ -21,7 +21,7 @@ class TA {
   private tb: TB
 
   addVal () {
-    this.tb.val += 1
+    this.tb.addVal()
   }
 
   constructor (tb: TB) {
@@ -30,15 +30,51 @@ class TA {
 }
 
 class TB {
-  val: number = 0
+  _val: number = 0
+  set val (v: number) {
+    this._val = v
+    this.tc.val += 1
+  }
+  get val () {
+    return this._val
+  }
+
+  tc: TC
 
   addVal () {
     this.val += 1
   }
+
+  constructor (tc: TC) {
+    this.tc = tc
+  }
 }
 
-const tb = reactive(new TB())
-const ta = reactive(new TA(tb))
+class TC {
+  val: number = 0
+}
+
+class TD {
+  ta: TA
+  tb: TB
+  tc: TC
+
+  add () {
+    this.ta.addVal()
+  }
+
+  get () {
+    return this.tc.val
+  }
+
+  constructor () {
+    this.tc = new TC()
+    this.tb = new TB(this.tc)
+    this.ta = new TA(this.tb)
+  }
+}
+
+const td = reactive(new TD())
 
 // test end
 
@@ -79,7 +115,7 @@ onMounted(() => {
     <div v-for="ele in playground.getTextList()">
       {{ ele }}
     </div>
-    <div @click="ta.addVal">{{tb.val}}</div>
+    <div @click="td.add">{{td.get()}}</div>
   </div>
 </template>
 
