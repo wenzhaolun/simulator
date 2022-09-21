@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref} from "vue"
+import { onMounted, reactive } from "vue"
+import { _AT } from '@/myJs/static_data'
+import type { ViewList } from '@/myJs/class/viewList'
+import { Playground } from '@/myJs/class/playground'
 
-import { Playground, TextBox } from "./myJs/class/myTs"
 
-let textBox = reactive(new TextBox())
+
+let viewList: ViewList = reactive({
+  textList: [],
+  controlList: {
+    playerControl: [],
+    itemControl: {
+        [_AT._ITEM_FUNC_TYPE.A]: [],
+        [_AT._ITEM_FUNC_TYPE.B]: []
+    }
+  }
+})
 
 let playground = new Playground(
-  textBox,  
+  viewList,
   {
     hp: 8,
     atk: 8,
@@ -14,79 +26,13 @@ let playground = new Playground(
     sans: 8
   }
 )
-
-let textList = reactive(playground.textBox.textArray)
-
 playground.init()
+
 
 // playground.autoRun()
 
-// test start
-
-class TA {
-  private val: number = 0
-  private tb: TB
-
-  addVal () {
-    this.tb.addVal()
-  }
-
-  constructor (tb: TB) {
-    this.tb = tb
-  }
-}
-
-class TB {
-  _val: number = 0
-  set val (v: number) {
-    this._val = v
-    this.tc.val += 1
-  }
-  get val () {
-    return this._val
-  }
-
-  tc: TC
-
-  addVal () {
-    this.val += 1
-  }
-
-  constructor (tc: TC) {
-    this.tc = tc
-  }
-}
-
-class TC {
-  val: number = 0
-}
-
-class TD {
-  ta: TA
-  tb: TB
-  tc: TC
-
-  add () {
-    this.ta.addVal()
-  }
-
-  get () {
-    return this.tc.val
-  }
-
-  constructor () {
-    this.tc = new TC()
-    this.tb = new TB(this.tc)
-    this.ta = new TA(this.tb)
-  }
-}
-
-const td = reactive(new TD())
-
-// test end
-
 onMounted(() => {
-  console.log('mounted here?')
+  console.log('mounted here? ==>', viewList)
 })
 
 </script>
@@ -95,7 +41,7 @@ onMounted(() => {
   <div>
     <div>
       <div
-      v-for="ele in playground.getPlayerControl().playerControl"
+      v-for="ele in viewList.controlList.playerControl"
       @click="playground.activatePlayerControl({key: ele.key})"
       style="border: 2px black solid;"
       >
@@ -103,7 +49,7 @@ onMounted(() => {
         <div>{{ele.intro}}</div>
       </div>
       <div
-      v-for="ele in playground.getPlayerControl().itemControl[0]"
+      v-for="ele in viewList.controlList.itemControl[_AT._ITEM_FUNC_TYPE.A]"
       @click="playground.activatePlayerControl({uuid: ele.uuid, key: ele.key})"
       style="border: 2px black solid;"
       >
@@ -111,7 +57,7 @@ onMounted(() => {
         <div>{{ele.intro}}</div>
       </div>
       <div
-      v-for="ele in playground.getPlayerControl().itemControl[1]"
+      v-for="ele in viewList.controlList.itemControl[_AT._ITEM_FUNC_TYPE.B]"
       @click="playground.activatePlayerControl({uuid: ele.uuid, key: ele.key})"
       style="border: 2px black solid;"
       >
@@ -119,10 +65,9 @@ onMounted(() => {
         <div>{{ele.intro}}</div>
       </div>
     </div>
-    <div v-for="ele in textList">
+    <div v-for="ele in viewList.textList">
       {{ ele }}
     </div>
-    <div @click="td.add">{{td.get()}}</div>
   </div>
 </template>
 

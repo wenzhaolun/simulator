@@ -949,6 +949,9 @@ export const ENEMY_BOX: _AT._ENEMY_BOX = {
 }
 
 export const LIMIT = {
+    playground: {
+        randomAddItemRate: 0.6
+    },
     stage: {
         light: {
             min: 0,

@@ -1,5 +1,5 @@
 export class TextBox {
-    public textArray: Array<string> = []
+    private textArray: Array<string> = []
 
     public push (text: string | null) {
         console.log('text from push of textBox ==>', text)
