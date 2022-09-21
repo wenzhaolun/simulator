@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref} from "vue"
 
-import { Playground } from "./myJs/myTs"
+import { Playground, TextBox } from "./myJs/class/myTs"
 
-let playground = reactive(new Playground({
-  hp: 8,
-  atk: 8,
-  def: 8,
-  sans: 8
-}))
+let textBox = reactive(new TextBox())
+
+let playground = new Playground(
+  textBox,  
+  {
+    hp: 8,
+    atk: 8,
+    def: 8,
+    sans: 8
+  }
+)
+
+let textList = reactive(playground.textBox.textArray)
 
 playground.init()
 
@@ -112,7 +119,7 @@ onMounted(() => {
         <div>{{ele.intro}}</div>
       </div>
     </div>
-    <div v-for="ele in playground.getTextList()">
+    <div v-for="ele in textList">
       {{ ele }}
     </div>
     <div @click="td.add">{{td.get()}}</div>

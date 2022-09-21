@@ -5,62 +5,8 @@ import {
     ITEM_BOX,
     PLAYER_BOX,
     ENEMY_BOX
-} from '../myJs/data'
+} from '../static_data'
 
-/** 根据最大值，随机获取0-最大值的整数。 */
-function randomNumber (max: number) {
-    return Math.round(Math.random() * max)
-}
-
-/** randomEleFromArray，在数组里随机抽气一个ele。 */
-function randomEFA<T>(array: Array<T>): T | null {
-    if (array.length > 0) {
-        return array[randomNumber(array.length - 1)]
-    } else {
-        return null
-    }
-}
-
-function randomEnumKey (x: object) {
-    const temp = Object.keys(x)
-    return randomNumber((temp.length / 2) - 1)
-}
-
-/**根据最大值和最小值，还有保底百分比，计算随机初始值。
- * @param min 最小值
- * @param max 最大值
- * @param percent 保底百分比
-*/
-function randomInitialValue (min: number, max: number, percent: number) {
-    const diff = max - min
-    return randomNumber(diff * (1 - percent)) + diff * percent + min
-}
-
-/**根据最大值和最小值，还有保底百分比，计算随机增加值。
- * @param min 最小值
- * @param max 最大值
- * @param eachPercent 保底百分比
-*/
-function randomPlusValue (min: number, max: number, eachPercent: number) {
-    const diff = max - min
-    return randomNumber(diff * eachPercent)
-}
-
-class TextBox {
-    public textArray: Array<string> = []
-
-    public push (text: string | null) {
-        console.log('text from push of textBox ==>', text)
-        if (text) {
-            this.textArray.splice(0 , 0, text)
-        } else {
-            console.log('text is null')
-        }
-    }
-    public getTextBox () {
-        return this.textArray
-    }
-}
 
 /**场景的基础属性的类
  * 这类属性有基础、扩展和合计，基础+扩展=合计
@@ -690,8 +636,8 @@ class Player {
         return res
     }
     public activateControl (key: _AT._PLAYER_CONTROL) {
-        // this.controlBox[key].func()
-        this.search()
+        this.controlBox[key].func()
+        // this.search()
     }
 
     private textBox: TextBox
@@ -1416,7 +1362,7 @@ export class Playground { // 包含整个游戏所有内容的总控制
         return this._round
     }
 
-    private textBox = new TextBox()
+    public textBox: TextBox
     public getTextList () {
         return this.textBox.getTextBox()
     }
@@ -1427,12 +1373,16 @@ export class Playground { // 包含整个游戏所有内容的总控制
         this.player.bindStage(this.stage)
     }
 
-    constructor(x: {
-        hp: Player['hp']['_data'],
-        atk: Player['atk'],
-        def: Player['def'],
-        sans: Player['sans']
-    }) {
+    constructor (
+        textBox: TextBox,
+        x: {
+            hp: Player['hp']['_data'],
+            atk: Player['atk'],
+            def: Player['def'],
+            sans: Player['sans']
+        }
+    ) {
+        this.textBox = textBox
         this.playerData = x
         this.player = new Player(this.textBox, x)
 
