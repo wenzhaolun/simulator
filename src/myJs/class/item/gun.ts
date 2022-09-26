@@ -1,52 +1,31 @@
-import { _AT, ITEM_BOX } from '@/myJs/static_data'
 import { Item } from '@/myJs/class/item/item'
-import type { EnemyGroup } from '@/myJs/class/actor/enemyGroup'
-import type { TextBox } from '@/myJs/class/textBox'
+import { turnNameToText, VIEW_BOX_TEXT } from '../viewBox'
+import { _ITEM_TYPE, _GUN_FUNC, ITEM_BOX, _ITEM_USE_STATE } from './static'
 
 export class Gun extends Item {
-    protected type: Item['type'] = _AT._ITEM_TYPE.GUN
-
+    protected itemType: _ITEM_TYPE = _ITEM_TYPE.GUN
+    public getName: () => string = () => {
+        return ITEM_BOX[_ITEM_TYPE.GUN].name
+    }
     private atk: number = 20
-    private enemyGroup: EnemyGroup
-
-    protected whenDurChange: Item['whenDurChange'] = () => {}
-    protected _dur: Item['_dur'] = 0
-    protected funcBox: Item['funcBox'] = {
-        [_AT._GUN_FUNC.SHOOT]: {
-            uuid: this.uuid,
-            key: _AT._GUN_FUNC.SHOOT,
-            ...ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT],
-            func: () => {
-                if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
-                    this.textBox.push(ITEM_BOX[this.type].func[_AT._GUN_FUNC.SHOOT].describe)
-                    this.enemyGroup.beAttacked({
-                        uuid: this.user.getUUID(),
-                        val: this.atk
-                    })
-
-                    this.dur = this.dur - 1
+    protected _dur = 6
+    protected funcBox = {
+        [_GUN_FUNC.SHOOT]: {
+            checkIfShow: () => { return this.affectItemArray().affectUser().getOpponentAmount() > 0 },
+            ifNeedOrient: () => { return !this.affectItemArray().affectUser().getIfHaveOpponentUUID() },
+            func: async () => {
+                const opponent = this.affectItemArray().affectUser().getOpponentAndClearUUID()
+                if (opponent) {
+                    opponent.affectHp().minus(this.uuid, this.atk)
+                    this.affectItemArray().affectUser().affectPlayground().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.GUN].funcBox[_GUN_FUNC.SHOOT].describe)
                 }
             }
         }
     }
 
-    public getFuncArray: Item['getFuncArray'] = () => {
-        let res: ReturnType<Item['getFuncArray']> = []
-
-        const {func, ...shoot} = this.funcBox[_AT._GUN_FUNC.SHOOT]
-
-        if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0 && this.enemyGroup.getIfHaveEnemy()) {
-            res.splice(0, 0, shoot)
-        }
-
-        return res
-    }
-
     constructor (
-        textBox: TextBox,
-        enemyGroup: EnemyGroup
+        itemArray: Item['itemArray']
     ) {
-        super(textBox)
-        this.enemyGroup = enemyGroup
+        super(itemArray)
     }
 }

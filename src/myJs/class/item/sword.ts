@@ -1,52 +1,34 @@
-import { _AT, ITEM_BOX } from '@/myJs/static_data'
 import { Item } from '@/myJs/class/item/item'
-import type { Player } from '@/myJs/class/actor/player'
-import type { EnemyGroup } from '@/myJs/class/actor/enemyGroup'
-import type { TextBox } from '@/myJs/class/textBox'
+import { ITEM_BOX, _GUN_FUNC, _ITEM_TYPE, _SWORD_FUNC } from './static'
+import { turnNameToText, VIEW_BOX_TEXT } from '../viewBox'
 
 export class Sword extends Item {
-    protected type: Item['type'] = _AT._ITEM_TYPE.SWORD
+    protected itemType: Item['itemType'] = _ITEM_TYPE.SWORD
+    public getName: () => string = () => {
+        return ITEM_BOX[_ITEM_TYPE.SWORD].name
+    }
     private atk: number = 6
 
-    private enemyGroup: EnemyGroup
-
-    protected whenDurChange: Item['whenDurChange'] = () => {}
     protected _dur: Item['_dur'] = 6
     protected funcBox: Item['funcBox'] = {
-        [_AT._SWORD_FUNC.ATTACK]: {
-            uuid: this.uuid,
-            key: _AT._SWORD_FUNC.ATTACK,
-            ...ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK],
-            func: (val: Player['atk']) => {
-                if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0) {
-                    this.textBox.push(ITEM_BOX[this.type].func[_AT._SWORD_FUNC.ATTACK].describe)
-                    this.enemyGroup.beAttacked({
-                        uuid: this.user.getUUID(),
-                        val: val + this.atk
-                    })
-
-                    this.dur = this.dur - 1
+        [_SWORD_FUNC.ATTACK]: {
+            checkIfShow: () => { return this.affectItemArray().affectUser().getOpponentAmount() > 0  },
+            ifNeedOrient: () => { return !this.affectItemArray().affectUser().getIfHaveOpponentUUID() },
+            func: () => {
+                const opponent = this.affectItemArray().affectUser().getOpponentAndClearUUID()
+                if (opponent) {
+                    const user = this.affectItemArray().affectUser()
+                    const sumAtk = user.affectHp().getDataVal() * 0.2 * (user.affectAtk().getAtk() + this.atk)
+                    opponent.affectHp().minus(this.uuid, sumAtk)
+                    this.affectItemArray().affectUser().affectPlayground().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.SWORD].funcBox[_SWORD_FUNC.ATTACK].describe)
                 }
             }
         }
     }
-    public getFuncArray: Item['getFuncArray'] = () => {
-        let res: ReturnType<Item['getFuncArray']> = []
-
-        const {func, ...attack} = this.funcBox[_AT._SWORD_FUNC.ATTACK]
-
-        if (this.user && this.state === _AT._ITEM_USE_STATE.ADDED && this.dur > 0 && this.enemyGroup.getIfHaveEnemy()) {
-            res.splice(0, 0, attack)
-        }
-
-        return res
-    }
 
     constructor (
-        textBox: TextBox,
-        enemyGroup: EnemyGroup
+        itemArray: Item['itemArray']
     ) {
-        super(textBox)
-        this.enemyGroup = enemyGroup
+        super(itemArray)
     }
 }

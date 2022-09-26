@@ -4,12 +4,8 @@ export function randomNumber (max: number) {
 }
 
 /** randomEleFromArray，在数组里随机抽气一个ele。 */
-export function randomEFA<T>(array: Array<T>): T | null {
-    if (array.length > 0) {
-        return array[randomNumber(array.length - 1)]
-    } else {
-        return null
-    }
+export function randomEFA<T>(array: Array<T>): T {
+    return array[randomNumber(array.length - 1)]
 }
 
 export function randomEnumKey (x: object) {

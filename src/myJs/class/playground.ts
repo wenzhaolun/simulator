@@ -1,29 +1,62 @@
-import { randomEnumKey } from '@/myJs/class/commonFunc'
-import { _AT } from '@/myJs/static_data'
-import { TextBox } from '@/myJs/class/textBox'
+import { randomEnumKey } from '@/myJs/class/common/commonFunc'
+import { turnNameToText, ViewBox, VIEW_BOX_TEXT } from '@/myJs/class/viewBox'
 import type { ViewList } from '@/myJs/class/viewList'
 import { Player } from '@/myJs/class/actor/player'
-import { EnemyGroup } from '@/myJs/class/actor/enemyGroup'
-import type { ItemFuncData, Item } from '@/myJs/class/item/item'
-import { Flashlight } from '@/myJs/class/item/flashlight'
-import { Sword } from '@/myJs/class/item/sword'
-import { Gun } from '@/myJs/class/item/gun'
+
 import { Stage } from '@/myJs/class/stage/stage'
+import type { _PLAYER_CONTROL } from './actor/player/static'
+
+import { _STAGE_STATE } from './stage/static'
+
+import { EnemyGroup } from './actor/enemy/enemyGroup'
+import { ItemCreator } from './item/itemCreator'
+import type { _ALLITEM_FUNC } from './item/static'
 
 export class Playground { // 包含整个游戏所有内容的总控制
     private viewList: ViewList
+    public affectViewList () {
+        return this.viewList
+    }
     /**玩家属性记录 */
     private playerData: {
-        hp: Player['hp']['_data'],
+        hp: number,
         atk: Player['atk'],
         def: Player['def'],
         sans: Player['sans']
     }
 
+    private stage: Stage | undefined
+    public affectStage () {
+        if (this.stage) {
+            return {
+                affectLight: this.stage.affectLight,
+                affectSmell: this.stage.affectSmell,
+                affectNoise: this.stage.affectNoise,
+                addProgress: this.stage.addProgress
+            }
+        } else {
+            console.log('no stage')
+        }
+    }
     private player: Player
+    public affectPlayer () {
+        return this.player
+    }
+    
     private enemyGroup: EnemyGroup
-    private stage: Stage
-    private textBox = new TextBox()
+    public affectEnemyGroup () {
+        return this.enemyGroup
+    }
+
+    private itemCreator: ItemCreator
+    public affectItemCreator () {
+        return this.itemCreator
+    }
+
+    private viewBox = new ViewBox()
+    public affectViewBox () {
+        return this.viewBox
+    }
 
     private stageNumber: number = 0
     private stageLength: number = 4
@@ -36,42 +69,6 @@ export class Playground { // 包含整个游戏所有内容的总控制
         }
     }
 
-    /**用于生成道具 */
-    private itemCreator (type: _AT._ITEM_TYPE): Item {
-        let res: Item
-        switch (type) {
-            case _AT._ITEM_TYPE.FLASHLIGHT: {
-                res = new Flashlight(
-                    this.textBox,
-                    this.stage
-                )
-                break
-            }
-            case _AT._ITEM_TYPE.SWORD: {
-                res = new Sword(
-                    this.textBox,
-                    this.enemyGroup
-                )
-                break
-            }
-            case _AT._ITEM_TYPE.GUN: {
-                res = new Gun(
-                    this.textBox,
-                    this.enemyGroup
-                )
-                break
-            }
-        }
-
-        return res
-    }
-
-    /** 模拟生成随机道具并被玩家获取 */
-    private addRandomItemToPlayer () {
-        const itemType: _AT._ITEM_TYPE = randomEnumKey(_AT._ITEM_TYPE)
-        let item: Item = this.itemCreator(itemType)
-        this.player.addItem(item)
-    }
 
     /**游戏的回合 */
     private _round: number = 0
@@ -81,44 +78,85 @@ export class Playground { // 包含整个游戏所有内容的总控制
         this.funcArrayPerRound.push(func)
     }
     private set round (x: number) {
-        console.log('round ===>', x)
+        this.funcArrayPerRound.forEach((ele) => {
+            ele()
+        })
         this._round = x
-        if (this.player.getPlayerItemAmount() < 3 && Math.random() > 0.6 && !this.stage.getIfProgressUpgrade()) {
-            this.addRandomItemToPlayer()
-        }
-        // this.addRandomItemToPlayer()
     }
     private get round () {
         return this._round
     }
 
     /**触发玩家的操作 */
-    public activatePlayerControl (x: {uuid?: Item['uuid'], key: ItemFuncData['key'] |  _AT._PLAYER_CONTROL}) {
-        if (x.uuid) {
-            this.player.useItem(x.uuid, x.key)
-        } else {
-            this.player.activateControl(x.key)
-            this.round += 1
+    public activatePlayerControl (key: _PLAYER_CONTROL) {
+        this.player.activateControl(key)
+        this.round += 1
+        
+        this.viewList.textList = this.viewBox.getTextBox()
+        this.viewList.controlList = this.player.getControl()
+        this.viewList.stageItemList = this.itemCreator.affectItemArray().getItemArray()
+    }
+
+    public activatePlayerItemFunc (uuid: string, funcKey: _ALLITEM_FUNC) {
+        const res = this.player.affectItemArray().useItem(uuid, funcKey)
+
+        if (res === 1) {
+            this.viewBox.setJumpBoxObject({
+                title: VIEW_BOX_TEXT.SELECT_OPPONENT.title,
+                array: turnNameToText(this.player.getAllOpponent())
+            })
+            
+            this.viewBox.pushFuncToAJBS((selsctedUUID: string) => {
+                this.player.selectOpponent(selsctedUUID)
+            })
+            this.viewBox.pushFuncToAJBS(() => {
+                this.player.affectItemArray().useItem(uuid, funcKey)
+            })
         }
 
-        this.viewList.textList = this.textBox.getTextBox()
+        this.viewList.selectEnemyObject = this.viewBox.getJumpBoxObject()
+        this.viewList.textList = this.viewBox.getTextBox()
         this.viewList.controlList = this.player.getControl()
     }
 
-    public init () {
-        this.stage.init()
-        this.player.init(this.playerData.hp)
-        this.player.bindStage(this.stage)
-
-        this.viewList.textList = this.textBox.getTextBox()
+    public selectJumpBoxSelection (uuid: string) {
+        this.viewBox.selectJumpBoxSelection(uuid)
+        this.viewList.selectEnemyObject = this.viewBox.getJumpBoxObject()
+        this.viewList.textList = this.viewBox.getTextBox()
         this.viewList.controlList = this.player.getControl()
+    }
+
+    public closeJumpBox () {
+        this.viewBox.closeJumpBox()
+        this.viewList.selectEnemyObject = this.viewBox.getJumpBoxObject()
+    }
+
+    public playerPickItem (uuid: string) {
+        const item = this.itemCreator.affectItemArray().getItem(uuid)
+        if (item) {
+            this.player.affectItemArray().addItem(item)
+        } else {
+            console.log('no item, pick fail.')
+        }
+        console.log('player ===>', this.player)
+        this.viewList.textList = this.viewBox.getTextBox()
+        this.viewList.controlList = this.player.getControl()
+        this.viewList.stageItemList = this.itemCreator.affectItemArray().getItemArray()
+    }
+
+    public init () {
+        this.player.init(10)
+        this.stage?.init()
+        this.viewList.textList = this.viewBox.getTextBox()
+        this.viewList.controlList = this.player.getControl()
+        console.log('viewBox ===>', this.viewBox)
         console.log('viewList ===>', this.viewList)
     }
 
     constructor (
         viewList: ViewList,
         x: {
-            hp: Player['hp']['_data'],
+            hp: number,
             atk: Player['atk'],
             def: Player['def'],
             sans: Player['sans']
@@ -127,13 +165,16 @@ export class Playground { // 包含整个游戏所有内容的总控制
         this.viewList = viewList
 
         this.playerData = x
-        this.player = new Player(this.textBox, x)
+        this.player = new Player(this, x)
 
-        this.stage = new Stage(
-            this.textBox,
-            _AT._STAGE_STATE.START
-        )
+        this.stage = new Stage(this, _STAGE_STATE.START)
 
-        this.enemyGroup = new EnemyGroup(this.textBox, this.player)
+        this.enemyGroup = new EnemyGroup(this)
+
+        this.itemCreator = new ItemCreator(this)
+
+        this.pushToFuncArrayPerRound(() => {
+            this.affectEnemyGroup().addEnemyRate(20)
+        })
     }
 }
