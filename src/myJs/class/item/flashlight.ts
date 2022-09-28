@@ -13,7 +13,7 @@ export class Flashlight extends Item {
             checkIfShow: () => { return !this.ifOn },
             ifNeedOrient: () => { return false },
             func: () => {
-                this.affectItemArray().affectUser().affectPlayground().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.FLASHLIGHT].funcBox[_FLASHLIGHT_FUNC.ON].describe)
+                this.affectItemArray().affectUser().affectPlayground().affectGame().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.FLASHLIGHT].funcBox[_FLASHLIGHT_FUNC.ON].describe)
                 this.affectItemArray().affectUser().affectPlayground().affectStage()?.affectLight().plus(this.uuid, 6)
                 this.ifOn = true
             }
@@ -22,7 +22,7 @@ export class Flashlight extends Item {
             checkIfShow: () => { return this.ifOn },
             ifNeedOrient: () => { return false },
             func: async () => {
-                this.affectItemArray().affectUser().affectPlayground().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.FLASHLIGHT].funcBox[_FLASHLIGHT_FUNC.OFF].describe)
+                this.affectItemArray().affectUser().affectPlayground().affectGame().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.FLASHLIGHT].funcBox[_FLASHLIGHT_FUNC.OFF].describe)
                 this.affectItemArray().affectUser().affectPlayground().affectStage()?.affectLight().remove(this.uuid)
                 this.ifOn = false
             }

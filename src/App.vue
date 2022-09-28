@@ -1,91 +1,54 @@
 <script setup lang="ts">
 import { onMounted, reactive } from "vue"
-import type { ViewList } from '@/myJs/class/viewList'
-import { Playground } from '@/myJs/class/playground'
+import { Game } from "./myJs/class/game";
 import { _ITEM_FUNC_TYPE } from "./myJs/class/item/static";
+import type { ViewDataForVue } from "./myJs/class/viewDataForVue";
+import PlayerSetting from '@/components/PlayerSetting.vue'
+import EnemySelectionJumpBox from './components/EnemySelectionJumpBox.vue'
+import Playground from './components/Playground.vue'
 
-
-
-let viewList: ViewList = reactive({
-  textList: [],
-  controlList: {
-    playerControl: [],
-    itemControl: {
-        [_ITEM_FUNC_TYPE.A]: [],
-        [_ITEM_FUNC_TYPE.B]: []
-    }
-  },
-  selectEnemyObject: undefined,
-  stageItemList: []
+let viewDataForVue: ViewDataForVue = reactive({
+  ifShowPlayerSettingPage: true,
+  ifShowPlaygroundPage: false,
+  textArray: [],
+  controlObject: undefined,
+  stageItemArray: [],
+  jumpBoxTitle: undefined,
+  enemySelection: [],
+  ifShowGameOverJumpBox: false
 })
 
-let playground = new Playground(
-  viewList,
-  {
-    hp: 8,
-    atk: 8,
-    def: 8,
-    sans: 8
-  }
-)
-playground.init()
-
-// playground.autoRun()
+let game = new Game(viewDataForVue)
 
 onMounted(() => {
-  console.log('mounted here? ==>', viewList)
+  console.log('mounted here')
 })
 
 </script>
 
 <template>
-  <div>
-    <div>
-      <div
-      v-for="ele in viewList.controlList.playerControl"
-      @click="playground.activatePlayerControl(ele.key)"
-      style="border: 2px black solid;"
-      >
-        <div>{{ele.name}}</div>
-        <div>{{ele.intro}}</div>
-      </div>
-      <div
-      v-for="ele in viewList.controlList.itemControl[_ITEM_FUNC_TYPE.A]"
-      @click="playground.activatePlayerItemFunc(ele.uuid, ele.key)"
-      style="border: 2px black solid;"
-      >
-        <div>{{ele.name}}</div>
-        <div>{{ele.intro}}</div>
-      </div>
-      <div
-      v-for="ele in viewList.controlList.itemControl[_ITEM_FUNC_TYPE.B]"
-      @click="playground.activatePlayerItemFunc(ele.uuid, ele.key)"
-      style="border: 2px black solid;"
-      >
-        <div>{{ele.name}}</div>
-        <div>{{ele.intro}}</div>
-      </div>
-    </div>
-    <div style="border: 2px red solid">
-      <div v-for="ele in viewList.stageItemList">
-        <div @click="playground.playerPickItem(ele.uuid)">{{ele.name}}</div>
-      </div>
-    </div>
-    <div style="border: 2px green solid">
-      <div v-if="viewList.selectEnemyObject">
-        <div>{{viewList.selectEnemyObject.title}}</div>
-        <div>
-          <div v-for="ele in viewList.selectEnemyObject.array">
-            <div @click="playground.selectJumpBoxSelection(ele.uuid)">{{ele.text}}</div>
-          </div>
-        </div>
-        <div @click="playground.closeJumpBox()">关闭</div>
-      </div>
-    </div>
-    <div v-for="ele in viewList.textList">
-      {{ ele }}
-    </div>
+  <div v-if="viewDataForVue.ifShowPlayerSettingPage">
+    <PlayerSetting
+    :if-show-player-setting-page="viewDataForVue.ifShowPlayerSettingPage"
+    @start-game="(playerParams) => {game.start(playerParams)}">
+    </PlayerSetting>
   </div>
+  <div>
+    <Playground
+    :view-data-for-vue="viewDataForVue"
+    @activate-player-control="(key) => { game.activatePlayerControl(key) }"
+    @activate-player-item-func="(uuid, funcKey) => { game.activatePlayerItemFunc(uuid, funcKey) }"
+    @player-pick-item="(uuid) => { game.playerPickItem(uuid) }"
+    ></Playground>
+  </div>
+  <div>
+    <EnemySelectionJumpBox
+    :enemy-selection=viewDataForVue.enemySelection
+    @select-selection="(selectedUUID) => {game.selectEnemySelection(selectedUUID)}"
+    @close-jump-box="() => { game.closeEnemySelectionBox() }">
+    </EnemySelectionJumpBox>
+  </div>
+  <div @click="game.fakeStart()">test</div>
 </template>
 
 <style scoped>

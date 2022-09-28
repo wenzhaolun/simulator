@@ -101,7 +101,7 @@ export function calLevel (val: number, diff: number): _STAGE_DATA_LEVEL {
             res = _STAGE_DATA_LEVEL.D
             break
         default:
-            res = _STAGE_DATA_LEVEL.A
+            res = _STAGE_DATA_LEVEL.D
             break
     }
     return res
@@ -152,7 +152,7 @@ interface PARAMS_FOR_CAW {
 /**所需基本参数（计算数据的等级并根据等级得出描述文字的功能）（用于场景的光、气味、噪声） */
 interface PARAMS_FOR_CAWFLSN extends PARAMS_FOR_CAW {
     /**场景是否经过第一轮文字描述 */
-    ifStageWrited: Boolean,
+    getIfStageWrited: () => Boolean,
     /**数据类型 */
     dataType: _STAGE_DATA
 }
@@ -164,11 +164,11 @@ interface PARAMS_FOR_CAWFP extends PARAMS_FOR_CAW {
 }
 
 /**计算数据的等级并根据等级得出描述文字 */
-export function calAndWriteForLSN ({pushText, ifStageWrited, stageType, dataType, newVal, curVal, min, max}: PARAMS_FOR_CAWFLSN) {
+export function calAndWriteForLSN ({pushText, getIfStageWrited, stageType, dataType, newVal, curVal, min, max}: PARAMS_FOR_CAWFLSN) {
     const diff = max - min
     let newLevel: _STAGE_DATA_LEVEL = calLevel(newVal, diff)
     let currentLevel: _STAGE_DATA_LEVEL = calLevel(curVal, diff)
-    if (ifStageWrited) { // 检查是否是已经经过第一轮描述的场景，如果不是，使用完整描述句式。
+    if (getIfStageWrited()) { // 检查是否是已经经过第一轮描述的场景，如果不是，使用完整描述句式。
         if (newLevel > currentLevel) {
             pushText(randomEFA(STAGE_BOX[stageType].data[dataType][_STAGE_DATA_STATE.INCREASE][newLevel]))
         }
@@ -182,16 +182,13 @@ export function calAndWriteForLSN ({pushText, ifStageWrited, stageType, dataType
 
 /**计算调查进度等级并根据等级得出描述文字 */
 export function calAndWriteForProgress ({pushText, stageType, detectType, newVal, curVal, min, max}: PARAMS_FOR_CAWFP) {
-    console.log('curVal ===>', curVal)
     if (curVal === 0) {
         pushText(randomEFA(STAGE_BOX[stageType].detect[detectType][_DETECT_STATE.START]))
     } else {
         const newState: _DETECT_STATE = calStateForProgress(newVal, min, max)
         const curState: _DETECT_STATE = calStateForProgress(curVal, min, max)
-
-        const res: _DETECT_STATE = newState === curState ? _DETECT_STATE.CONTINUE : newState
-
-        pushText(randomEFA(STAGE_BOX[stageType].detect[detectType][res]))
+        const state: _DETECT_STATE = newState === curState ? _DETECT_STATE.CONTINUE : newState
+        pushText(randomEFA(STAGE_BOX[stageType].detect[detectType][state]))
     }
 }
 
@@ -201,15 +198,15 @@ export const STAGE_BOX: _STAGE_BOX = {
         name: '房间',
         state: {
             [_STAGE_STATE.START]: ['你在一个房间里醒来', '你来到了一个房间里', '你身处在一个奇怪的房间里'],
-            [_STAGE_STATE.HALFWAY]: [],
-            [_STAGE_STATE.END]: []
+            [_STAGE_STATE.HALFWAY]: ['你发现出口的另一边居然是一个房间'],
+            [_STAGE_STATE.END]: ['你逃到了一个房间']
         },
         data: {
             [_STAGE_DATA.LIGHT]: {
                 [_STAGE_DATA_STATE.NEW]: {
                     [_STAGE_DATA_LEVEL.A]: ['房间里一片漆黑', '房间里十分黑暗', '房间里几乎什么都看不见'],
-                    [_STAGE_DATA_LEVEL.B]: ['昏暗的房间让你很难看清周围的东西', '周围只有一点微光的'],
-                    [_STAGE_DATA_LEVEL.C]: ['昏黄的光线由窗口进入了房间', '房间被幽绿的光线笼罩的', '整个房间充满了诡异的蓝光'],
+                    [_STAGE_DATA_LEVEL.B]: ['昏暗的房间让你很难看清周围的东西', '周围只有一点微光'],
+                    [_STAGE_DATA_LEVEL.C]: ['昏黄的光线由窗口进入了房间', '房间被幽绿的光线笼罩', '整个房间充满了诡异的蓝光'],
                     [_STAGE_DATA_LEVEL.D]: ['房间里十分光亮', '这个房间灯火通明']
                 },
                 [_STAGE_DATA_STATE.INCREASE]: {
@@ -291,16 +288,16 @@ export const STAGE_BOX: _STAGE_BOX = {
         name: '地牢',
         state: {
             [_STAGE_STATE.START]: [`你在一个地牢里醒来`, `你身处于一个地牢`, `你身处在一个潮湿的地牢里`],
-            [_STAGE_STATE.HALFWAY]: [],
-            [_STAGE_STATE.END]: []
+            [_STAGE_STATE.HALFWAY]: ['你慌张跑进了出口，脚下一空，掉进了一个地牢'],
+            [_STAGE_STATE.END]: ['你逃到了一个地牢']
         },
         data: {
             [_STAGE_DATA.LIGHT]: {
                 [_STAGE_DATA_STATE.NEW]: {
                     [_STAGE_DATA_LEVEL.A]: ['地牢里漆黑一片', '周围几乎什么都看不见'],
-                    [_STAGE_DATA_LEVEL.B]: ['幽暗的', '昏暗的', '只有一点微光的'],
-                    [_STAGE_DATA_LEVEL.C]: ['昏黄的', '被幽绿的光线笼罩的', '充满诡异蓝光的'],
-                    [_STAGE_DATA_LEVEL.D]: ['光亮的', '灯火通明的', '亮如白昼的']
+                    [_STAGE_DATA_LEVEL.B]: ['地牢里一片昏暗', '地牢里只有一点微光的'],
+                    [_STAGE_DATA_LEVEL.C]: ['地牢被幽绿的光线笼罩', '地牢里充满诡异蓝光'],
+                    [_STAGE_DATA_LEVEL.D]: ['地牢很光亮']
                 },
                 [_STAGE_DATA_STATE.INCREASE]: {
                     [_STAGE_DATA_LEVEL.A]: ['周围依然是一片漆黑'],
@@ -381,8 +378,8 @@ export const STAGE_BOX: _STAGE_BOX = {
         name: '教堂',
         state: {
             [_STAGE_STATE.START]: ['你在一个教堂里醒来', '你发现你来到了一个教堂', '你身处在一个教堂里'],
-            [_STAGE_STATE.HALFWAY]: [],
-            [_STAGE_STATE.END]: []
+            [_STAGE_STATE.HALFWAY]: ['你通过出口来到了一个教堂'],
+            [_STAGE_STATE.END]: ['你在出口的尽头找到了一个教堂']
         },
         data: {
             [_STAGE_DATA.LIGHT]: {
@@ -471,8 +468,8 @@ export const STAGE_BOX: _STAGE_BOX = {
         name: '墓穴',
         state: {
             [_STAGE_STATE.START]: [`你在一个墓穴里醒来`, `你来到了一个墓穴`, `你身处在一个墓穴里`],
-            [_STAGE_STATE.HALFWAY]: [],
-            [_STAGE_STATE.END]: []
+            [_STAGE_STATE.HALFWAY]: ['与出口连通的居然是一个墓穴'],
+            [_STAGE_STATE.END]: ['你发现自己居然来到了一个墓穴']
         },
         data: {
             [_STAGE_DATA.LIGHT]: {
@@ -561,8 +558,8 @@ export const STAGE_BOX: _STAGE_BOX = {
         name: '地下室',
         state: {
             [_STAGE_STATE.START]: [`你在一个地下室里醒来`, `你来到了一个地下室`, `你身处在一个地下室里`],
-            [_STAGE_STATE.HALFWAY]: [],
-            [_STAGE_STATE.END]: []
+            [_STAGE_STATE.HALFWAY]: ['你走到了一个地下室'],
+            [_STAGE_STATE.END]: ['你跑进了一个地下室']
         },
         data: {
             [_STAGE_DATA.LIGHT]: {
@@ -647,6 +644,11 @@ export const STAGE_BOX: _STAGE_BOX = {
             }
         }
     }
+}
+
+export const STAGE_EVENT = {
+    leave: ['你找到了出口'],
+    win: ['你终于逃出来了']
 }
 
 export const STAGE_LIMIT = {

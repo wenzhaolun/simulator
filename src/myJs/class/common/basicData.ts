@@ -168,9 +168,12 @@ export class BasicData {
         this.whenDataChangeFuncArray.push(func)
     }
 
-    /**获取属性的好坏比率（超过上下限中间值的就是好，否则就是坏） */
+    /**
+     * 获取属性的好坏比率（超过上下限中间值的就是好，否则就是坏）
+     * 值的可能范围是0-1
+     * */
     public getConditionRate () {
-        return this.calData(this.data) / ((this.max - this.min) / 2)
+        return this.calData(this.data) / ((this.max + this.min) / 2)
     }
 
     constructor (min: number, max: number) {

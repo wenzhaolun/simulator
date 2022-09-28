@@ -29,6 +29,8 @@ export enum _ENEMY_DATA {
 export type _ENEMY_BOX = {
     [key in _ENEMY_TYPE]: {
         name: string,
+        appear: string,
+        attack: Array<string>,
         data: {
             [key in _ENEMY_DATA]: {
                 [key in _DATA_STATE]: Array<string>
@@ -41,6 +43,8 @@ export type _ENEMY_BOX = {
 export const ENEMY_BOX: _ENEMY_BOX = {
     [_ENEMY_TYPE.HUMAN_BODY_MONSTER]: {
         name: '全身都是眼睛的人形怪物',
+        appear: '一个人形怪物出现了，全身都长着眼睛。',
+        attack: ['人形怪物向你射出眼睛', '人形怪物张开长满牙齿的眼睛扑向你'],
         data: {
             [_ENEMY_DATA.HP]: {
                 [_DATA_STATE.INCREASE]: [],
@@ -83,16 +87,18 @@ export const ENEMY_BOX: _ENEMY_BOX = {
     },
     [_ENEMY_TYPE.DOG_HEAD]: {
         name: '由狗头混成一团的肉泥',
+        appear: '一团恶心的肉泥出现了',
+        attack: ['狗头突然向你撞去'],
         data: {
             [_ENEMY_DATA.HP]: {
                 [_DATA_STATE.INCREASE]: [],
                 [_DATA_STATE.DECREASE]: [
                     '狗头发出悲惨的叫声',
-                    '狗头的皮肤开始裂开了'
+                    '狗头的皮肤逐渐裂开'
                 ],
                 [_DATA_STATE.ZERO]: [
                     '狗头的全部眼睛都闭上了',
-                    '全部狗头的不动了'
+                    '全部狗头都不动了'
                 ]
             },
             [_ENEMY_DATA.NOISE]: {
@@ -125,6 +131,8 @@ export const ENEMY_BOX: _ENEMY_BOX = {
     },
     [_ENEMY_TYPE.DARK_PLATE]: {
         name: '怪异的黑色碟状物',
+        appear: '一个黑色碟状物凭空出现了',
+        attack: ['碟状物向你喷射出一团烟雾', '碟状物向你高速撞来'],
         data: {
             [_ENEMY_DATA.HP]: {
                 [_DATA_STATE.INCREASE]: [],
@@ -167,6 +175,8 @@ export const ENEMY_BOX: _ENEMY_BOX = {
     },
     [_ENEMY_TYPE.BLUE_TENTACLES]: {
         name: '巨大的蓝色触手',
+        appear: '一条巨大的触手从地上窜出。',
+        attack: ['触手把你绊倒了', '触手攻击了你'],
         data: {
             [_ENEMY_DATA.HP]: {
                 [_DATA_STATE.INCREASE]: [],
@@ -208,7 +218,7 @@ export const ENEMY_BOX: _ENEMY_BOX = {
 
 export const ENEMY_LIMIT = {
     amount: {
-        max: 3
+        max: 2
     },
     rate: {
         min: 0,
@@ -219,8 +229,8 @@ export const ENEMY_LIMIT = {
         eachPercent: 0.2
     },
     hp: {
-        min: 1,
-        max: 8,
+        min: 4,
+        max: 16,
         percent: 0.3,
         eachPercent: 0.1
     },
@@ -262,7 +272,6 @@ interface PARAMS_FOR_ENEMY_CAW {
     curVal: number
 }
 
-
 export const calAndWriteForEnemy = ({pushText, enemyType, dataType, newVal, curVal}: PARAMS_FOR_ENEMY_CAW) => {
     if (newVal > 0) {
         if (newVal > curVal) {
@@ -276,4 +285,3 @@ export const calAndWriteForEnemy = ({pushText, enemyType, dataType, newVal, curV
         pushText(randomEFA(ENEMY_BOX[enemyType].data[dataType][_DATA_STATE.ZERO]))
     }
 }
-

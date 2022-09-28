@@ -4,7 +4,6 @@ import { BasicData } from '../../common/basicData'
 import { _PLAYER_DATA, _DATA_STATE } from '../player/static'
 import { _ENEMY_TYPE, ENEMY_BOX, _ENEMY_DATA, ENEMY_LIMIT, calAndWriteForEnemy } from './static'
 import type { Playground } from '../../playground'
-import type { EnemyGroup } from './enemyGroup'
 import { Actor } from '../actor'
 
 export class Enemy extends Actor {
@@ -12,27 +11,25 @@ export class Enemy extends Actor {
     public getName () { return ENEMY_BOX[this.enemyType].name }
     private readonly enemyType: _ENEMY_TYPE = randomEnumKey(_ENEMY_TYPE)
 
-    public attack () {}
+    public attack = () => {
+        const opponent = randomEFA(this.getAllOpponent())
+        if (opponent.uuid === this.affectPlayground().affectPlayer().getUUID()) {
+            this.affectPlayground().affectViewBox().pushText(randomEFA(ENEMY_BOX[this.enemyType].attack))
+            this.affectPlayground().affectPlayer().affectHp().minus(this.uuid, this.atk)
+        } else {
+            console.log('enemy attack fail')
+        }
+    }
 
     private noise = new BasicData(ENEMY_LIMIT.noise.min, ENEMY_LIMIT.noise.max)
 
     private smell = new BasicData(ENEMY_LIMIT.smell.min, ENEMY_LIMIT.smell.max)
 
-
-    /**被攻击的处理方法
-     * @param x 受到的攻击，包含发出攻击对象的uuid和攻击的val。
-    */
-    public beAttacked (x: {uuid: string, val: number}): void {
-        /**被攻击时，受到的攻击力减防御的值 */
-        const atkMinusDef = x.val - this.def
-        if (atkMinusDef > 0) {
-            this.hp.set(x.uuid, 0 - atkMinusDef)
-        }
-    }
-
     /**敌人死亡 */
     public die () {
         this.noise.remove(this.uuid)
+        this.smell.remove(this.uuid)
+        this.affectPlayground().affectEnemyGroup().removeEnemy(this.uuid)
     }
 
     /**为玩家以后可能装死预留的功能 */
@@ -40,7 +37,13 @@ export class Enemy extends Actor {
         return 1
     }
     public getAllOpponent = () => {
-        return this.affectPlayground().affectEnemyGroup().getEnemyGroup()
+        let res: Array<{uuid: string, name: string}> = []
+        const playerOpponent = {uuid: this.affectPlayground().affectPlayer().getUUID(), name: 'player'}
+        res = res.concat(playerOpponent)
+        // 敌人内部互相攻击的事件以后再完善
+        // const enemyOpponent = this.affectPlayground().affectEnemyGroup().getEnemyGroup()
+        // res = res.concat(enemyOpponent)
+        return res
     }
 
     public init (x: {
@@ -48,6 +51,8 @@ export class Enemy extends Actor {
         initialNoise: number,
         initialSmell: number
     }) {
+        this.affectPlayground().affectViewBox().pushText(ENEMY_BOX[this.enemyType].appear)
+
         this.hp.set(this.uuid, x.initialHp)
 
         this.noise.set(this.uuid, x.initialNoise)

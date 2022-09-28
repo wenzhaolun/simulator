@@ -84,7 +84,7 @@ export class Player extends Actor {
         const {sans, ...params} = x
         super(playground, {...params, ifCanUseItem: true})
 
-        const pushText = (text: string) => { this.affectPlayground().affectViewBox().pushText(text) }
+        const pushText = (text: string) => { this.affectPlayground().affectGame().affectViewBox().pushText(text) }
         this.hp.addWDCF((newVal, curVal) => {
             calAndWriteForHp({pushText, newVal, curVal})
         })

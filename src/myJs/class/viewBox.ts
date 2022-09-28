@@ -1,4 +1,5 @@
 import type { Player } from "./actor/player"
+import type { ViewDataForVue } from "./viewDataForVue"
 
 export const VIEW_BOX_TEXT = {
     SELECT_OPPONENT: {
@@ -19,6 +20,19 @@ export function turnNameToText (array: Array<{uuid: string, name: string}>): Arr
 
 /**不要让vue渲染的数据在该box里赋值。该box只用于主动让vue的渲染数据从这里取值。 */
 export class ViewBox {
+    // 设置玩家初始属性模块
+    /**判断是否打开玩家属性设置页面 */
+    private ifShowPlayerSettingPage: boolean = false
+    public openPlayerSettingPage () { this.ifShowPlayerSettingPage = true }
+    public closePlayerSettingPage () { this.ifShowPlayerSettingPage = false }
+
+    // 主要游戏内容的显示模块
+    /**判断是否打开主要游戏页面 */
+    private ifShowPlaygroundPage: boolean = false
+    public openPlaygroundPage () { this.ifShowPlaygroundPage = true }
+    public closePlaygroundPage () { this.ifShowPlaygroundPage = false }
+    
+
     // 文字描述模块
     private textArray: Array<string> = []
     public pushText (text: string | null) {
@@ -31,6 +45,9 @@ export class ViewBox {
     }
     public getTextBox () { return this.textArray }
 
+    // 场景内可拾取道具
+    private stageItemArray: Array<{ uuid: string, name: string }> = []
+
     // 玩家操作选项模块
     private controlObject: ReturnType<Player['getControl']> | undefined
     public setControlArray (controlObject: ReturnType<Player['getControl']>) {
@@ -38,29 +55,41 @@ export class ViewBox {
     }
     public getControlObject () { return this.controlObject }
 
+    // 弹窗题目
+    private jumpBoxTitle: string | undefined
+
     // 玩家选择指向目标的弹窗模块
-    private jumpBoxObject: { title: string | undefined, array: Array<{uuid: string, text: string}> } | undefined
-    public setJumpBoxObject (jumpBoxObject: { title: string, array: Array<{uuid: string, text: string}>}) {
-        this.jumpBoxObject = jumpBoxObject
+    private enemySelection: Array<{uuid: string, text: string}> = []
+    public openEnemySelectionBox (enemySelection: Array<{uuid: string, text: string}>) { this.enemySelection = enemySelection }
+    public closeEnemySelectionBox () { this.enemySelection = [] }
+
+    // 游戏结束提示弹窗
+    private gameOverJumpBoxObject = {
+        title: '你死了',
+        button: '重新开始'
     }
-    public getJumpBoxObject () { return this.jumpBoxObject }
-    private funcArrayAfterJumpBoxSelected: Array<(selectedUUID: string) => void> = []
-    /**向弹窗推送功能，这些功能会在弹窗的选项被选择后执行。（selectJumpBoxSelection里执行） */
-    public pushFuncToAJBS ( func: ( selectedUUID: string ) => void ) { this.funcArrayAfterJumpBoxSelected.push(func) }
-    // 用这个测试下箭头函数的特性
-    public selectJumpBoxSelection (selectedUUID: string) {
-        // 执行完后并关闭弹窗,清空弹窗内容。
-        this.jumpBoxObject = undefined
-        // 执行外部推送进来，在选择选项后执行的脚本。
-        this.funcArrayAfterJumpBoxSelected.forEach((ele) => { ele(selectedUUID) })
-        // 清空外部推送进来的在选择选项后执行的脚本。
-        this.funcArrayAfterJumpBoxSelected = []
+    private ifShowGameOverJumpBox: boolean = false
+    public getIfShowGameOverJumpBox () {
+        return this.ifShowGameOverJumpBox
     }
-    /**只关闭，不选择。原定在选择后执行的功能也不执行并直接清空。 */
-    public closeJumpBox () {
-        // 执行完后并关闭弹窗,清空弹窗内容。
-        this.jumpBoxObject = undefined
-        // 清空外部推送进来的在选择选项后执行的脚本。
-        this.funcArrayAfterJumpBoxSelected = []
+    public openGameOverJumpBox () {
+        this.ifShowGameOverJumpBox = true
+    }
+    public closeGameOverJumpBox () {
+        this.ifShowGameOverJumpBox = false
+    }
+
+    // 获取所有viewDataForVue所需的数据
+    public get: () => ViewDataForVue = () => {
+        return {
+            ifShowPlayerSettingPage: this.ifShowPlayerSettingPage,
+            ifShowPlaygroundPage: this.ifShowPlaygroundPage,
+            textArray: this.textArray,
+            controlObject: this.controlObject,
+            stageItemArray: this.stageItemArray,
+            jumpBoxTitle: this.jumpBoxTitle,
+            enemySelection: this.enemySelection,
+            ifShowGameOverJumpBox: this.ifShowGameOverJumpBox
+        }
     }
 }
