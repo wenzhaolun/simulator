@@ -19,7 +19,7 @@ export class ItemCreator extends Actor {
         
         let res: Array<{ uuid: string; name: string; }> = []
         res.push({uuid: player.getUUID(), name: 'player'})
-        res.concat(enemyGroup)
+        res = res.concat(enemyGroup)
 
         return res
     }

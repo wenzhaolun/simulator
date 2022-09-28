@@ -7,9 +7,9 @@ import type { Actor } from '../actor'
 export class EnemyGroup {
     private group: Array<Enemy> = []
     private spawnEnemy () {
-        console.log('msg from spawnEnemy')
-        this.group.splice(0, 0, new Enemy(this.playground))
-        this.group[0].init({
+        const enemy = new Enemy(this.playground)
+        this.group.push(enemy)
+        enemy.init({
             initialHp: randomInitialValue(ENEMY_LIMIT.hp.min, ENEMY_LIMIT.hp.max, ENEMY_LIMIT.hp.percent),
             initialNoise: randomInitialValue(ENEMY_LIMIT.noise.min, ENEMY_LIMIT.noise.max, ENEMY_LIMIT.noise.percent),
             initialSmell: randomInitialValue(ENEMY_LIMIT.smell.min, ENEMY_LIMIT.smell.max, ENEMY_LIMIT.smell.percent)
@@ -28,7 +28,7 @@ export class EnemyGroup {
     private get enemyRate () {
         return this._enemyRate
     }
-    public addEnemyRate (v: number) {
+    private addEnemyRate (v: number) {
         if (v <= ENEMY_LIMIT.rate.max) {
             this.enemyRate += v
         } else {
@@ -63,6 +63,16 @@ export class EnemyGroup {
         })
         if (index >= 0) {
             return this.group[index]
+        }
+    }
+    public removeEnemy (uuid: string) {
+        const index = this.group.findIndex((ele) => {
+            return ele.getUUID() === uuid
+        })
+        if (index >= 0) {
+            this.group.splice(index, 1)
+        } else {
+            console.log('can\'t find enemy. remove fail.')
         }
     }
     /**
@@ -120,7 +130,7 @@ export class EnemyGroup {
                     break
             }
         } else {
-            this.addEnemyRate(10)
+            this.addEnemyRate(randomPlusValue(ENEMY_LIMIT.rate.min, ENEMY_LIMIT.rate.max, ENEMY_LIMIT.rate.eachPercent))
         }
     }
 

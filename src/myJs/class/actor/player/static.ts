@@ -92,7 +92,32 @@ export const PLAYER_BOX: _PLAYER_BOX = {
     }
 }
 
+export interface _PLAYER_PARAMS {
+    hp: number,
+    atk: number,
+    def: number,
+    sans: number
+}
+
 export const PLAYER_LIMIT = {
+    totalPoints: {
+        min: 0,
+        max: 10
+    },
+    playerData: {
+        hp: {
+            min: 1
+        },
+        atk: {
+            min: 0
+        },
+        def: {
+            min: 0
+        },
+        sans: {
+            min: 0
+        }
+    },
     itemAmount: 2,
     findItem: 0.75
 }

@@ -7,7 +7,7 @@ export class Sword extends Item {
     public getName: () => string = () => {
         return ITEM_BOX[_ITEM_TYPE.SWORD].name
     }
-    private atk: number = 6
+    private atk: number = 3
 
     protected _dur: Item['_dur'] = 6
     protected funcBox: Item['funcBox'] = {
@@ -17,10 +17,10 @@ export class Sword extends Item {
             func: () => {
                 const opponent = this.affectItemArray().affectUser().getOpponentAndClearUUID()
                 if (opponent) {
+                    this.affectItemArray().affectUser().affectPlayground().affectGame().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.SWORD].funcBox[_SWORD_FUNC.ATTACK].describe)
                     const user = this.affectItemArray().affectUser()
-                    const sumAtk = user.affectHp().getDataVal() * 0.2 * (user.affectAtk().getAtk() + this.atk)
+                    const sumAtk = user.affectHp().getDataVal() * 0.1 * (user.affectAtk().getAtk() + this.atk)
                     opponent.affectHp().minus(this.uuid, sumAtk)
-                    this.affectItemArray().affectUser().affectPlayground().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.SWORD].funcBox[_SWORD_FUNC.ATTACK].describe)
                 }
             }
         }

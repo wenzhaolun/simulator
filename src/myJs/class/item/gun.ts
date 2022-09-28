@@ -7,7 +7,7 @@ export class Gun extends Item {
     public getName: () => string = () => {
         return ITEM_BOX[_ITEM_TYPE.GUN].name
     }
-    private atk: number = 20
+    private atk: number = 6
     protected _dur = 6
     protected funcBox = {
         [_GUN_FUNC.SHOOT]: {
@@ -16,8 +16,8 @@ export class Gun extends Item {
             func: async () => {
                 const opponent = this.affectItemArray().affectUser().getOpponentAndClearUUID()
                 if (opponent) {
+                    this.affectItemArray().affectUser().affectPlayground().affectGame().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.GUN].funcBox[_GUN_FUNC.SHOOT].describe)
                     opponent.affectHp().minus(this.uuid, this.atk)
-                    this.affectItemArray().affectUser().affectPlayground().affectViewBox().pushText(ITEM_BOX[_ITEM_TYPE.GUN].funcBox[_GUN_FUNC.SHOOT].describe)
                 }
             }
         }
