@@ -18,13 +18,22 @@ export class Game {
         this.viewBox.closePlayerSettingPage()
         this.viewBox.openPlaygroundPage()
         
+<<<<<<< HEAD
         this.viewDataForVue.ifShowPlayerSettingPage = this.viewBox.get().ifShowPlayerSettingPage
+=======
+        this.updateViewDataForVue()
+>>>>>>> 53bfb19bf51278d5f7b68b9dc735363d38ffcea3
     }
 
     public fakeStart = () => {
         this.viewBox.closePlayerSettingPage()
+<<<<<<< HEAD
         
         this.viewDataForVue.ifShowPlayerSettingPage = this.viewBox.get().ifShowPlayerSettingPage
+=======
+        this.viewDataForVue = this.viewBox.get()
+        console.log('viewDataForVue ==>', this.viewDataForVue)
+>>>>>>> 53bfb19bf51278d5f7b68b9dc735363d38ffcea3
     }
 
     public restart () {
@@ -101,6 +110,13 @@ export class Game {
         }
     }
     private viewDataForVue: ViewDataForVue
+<<<<<<< HEAD
+=======
+    public updateViewDataForVue () {
+        this.viewDataForVue = this.viewBox.get()
+        console.log('viewDataForVue ===>', this.viewDataForVue)
+    }
+>>>>>>> 53bfb19bf51278d5f7b68b9dc735363d38ffcea3
 
     constructor (viewDataForVue: ViewDataForVue) {
         this.viewDataForVue = viewDataForVue
