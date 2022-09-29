@@ -2,7 +2,7 @@
 import { PLAYER_LIMIT, type _PLAYER_PARAMS } from '@/myJs/class/actor/player/static';
 import { reactive, computed, ref, type Ref } from '@vue/reactivity';
 
-const { ifShowPlayerSettingPage } = defineProps<{
+const props = defineProps<{
     ifShowPlayerSettingPage: boolean
 }>()
 
@@ -57,7 +57,7 @@ const ifCanStart = computed(() => {
 </script>
 
 <template>
-    <div v-if="ifShowPlayerSettingPage">
+    <div v-if="props.ifShowPlayerSettingPage">
         <div>{{totalPoint}}</div>
         <div>
             <div>

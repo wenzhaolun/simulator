@@ -18,22 +18,13 @@ export class Game {
         this.viewBox.closePlayerSettingPage()
         this.viewBox.openPlaygroundPage()
         
-<<<<<<< HEAD
         this.viewDataForVue.ifShowPlayerSettingPage = this.viewBox.get().ifShowPlayerSettingPage
-=======
-        this.updateViewDataForVue()
->>>>>>> 53bfb19bf51278d5f7b68b9dc735363d38ffcea3
     }
 
     public fakeStart = () => {
         this.viewBox.closePlayerSettingPage()
-<<<<<<< HEAD
         
         this.viewDataForVue.ifShowPlayerSettingPage = this.viewBox.get().ifShowPlayerSettingPage
-=======
-        this.viewDataForVue = this.viewBox.get()
-        console.log('viewDataForVue ==>', this.viewDataForVue)
->>>>>>> 53bfb19bf51278d5f7b68b9dc735363d38ffcea3
     }
 
     public restart () {
@@ -46,7 +37,7 @@ export class Game {
         
         this.affectPlayground()?.nextRound()
 
-        this.updateViewDataForVue()
+        // this.updateViewDataForVue()
     }
     /**触发玩家的道具功能 */
     public activatePlayerItemFunc (uuid: string, funcKey: _ALLITEM_FUNC) {
@@ -61,7 +52,7 @@ export class Game {
             }
         }
 
-        this.updateViewDataForVue()
+        // this.updateViewDataForVue()
     }
 
     /**这些功能会在弹窗的选项被选择后执行。（selectEnemySelection里执行） */
@@ -75,12 +66,12 @@ export class Game {
         // 清空外部推送进来的在选择选项后执行的脚本。
         this.funcArrayAfterSetselectEnemySelection = []
 
-        this.updateViewDataForVue()
+        // this.updateViewDataForVue()
     }
     /**玩家关闭弹窗 */
     public closeEnemySelectionBox () {
         this.viewBox.closeEnemySelectionBox()
-        this.updateViewDataForVue()
+        // this.updateViewDataForVue()
     }
     
     /**玩家选择道具 */
@@ -92,7 +83,7 @@ export class Game {
             console.log('no item, pick fail.')
         }
 
-        this.updateViewDataForVue()
+        // this.updateViewDataForVue()
     }
 
     /**打开game over 弹窗 */
