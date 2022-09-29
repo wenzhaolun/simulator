@@ -1,6 +1,5 @@
 import { Item } from '@/myJs/class/item/item'
 import { ITEM_BOX, _GUN_FUNC, _ITEM_TYPE, _SWORD_FUNC } from './static'
-import { turnNameToText, VIEW_BOX_TEXT } from '../viewBox'
 
 export class Sword extends Item {
     protected itemType: Item['itemType'] = _ITEM_TYPE.SWORD

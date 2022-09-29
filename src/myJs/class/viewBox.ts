@@ -1,13 +1,6 @@
 import type { Player } from "./actor/player"
 import type { ViewDataForVue } from "./viewDataForVue"
 
-export const VIEW_BOX_TEXT = {
-    SELECT_OPPONENT: {
-        title: '选择敌人',
-        button: '取消',
-    }
-}
-
 /**衔接返回的对手列表的object与提供给jumpBox的object，因为其中的key不一样，一个是name，一个是text */
 export function turnNameToText (array: Array<{uuid: string, name: string}>): Array<{uuid: string, text: string}> {
     let res: Array<{uuid: string, text: string}> = []

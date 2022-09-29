@@ -96,7 +96,7 @@ onMounted(() => {
       <div>test</div>
       <div>fake:{{data.fd}}</div>
       <div>trueA:{{td.a}}</div>
-      <div>trueB:{{td.b}}</div>
+      <!-- <div>trueB:{{td.b}}</div> -->
       <div @click="data.plus">add</div>
       <div @click="data.onlyPlusFd">onlyPlusFd</div>
       <div @click="data.onlyPlusTdb">onlyPlusTdb</div>

@@ -1,5 +1,4 @@
 import { Item } from '@/myJs/class/item/item'
-import { turnNameToText, VIEW_BOX_TEXT } from '../viewBox'
 import { _ITEM_TYPE, _GUN_FUNC, ITEM_BOX, _ITEM_USE_STATE } from './static'
 
 export class Gun extends Item {

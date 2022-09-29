@@ -21,12 +21,6 @@ export class Game {
         this.viewDataForVue.ifShowPlayerSettingPage = this.viewBox.get().ifShowPlayerSettingPage
     }
 
-    public fakeStart = () => {
-        this.viewBox.closePlayerSettingPage()
-        
-        this.viewDataForVue.ifShowPlayerSettingPage = this.viewBox.get().ifShowPlayerSettingPage
-    }
-
     public restart () {
 
     }
