@@ -34,6 +34,10 @@ class Data {
     this.fd += 1
   }
 
+  public onlyPlusTda () {
+    this.td.a += 1
+  }
+
   public onlyPlusTdb () {
     this.td.b += 1
   }
@@ -99,6 +103,7 @@ onMounted(() => {
       <!-- <div>trueB:{{td.b}}</div> -->
       <div @click="data.plus">add</div>
       <div @click="data.onlyPlusFd">onlyPlusFd</div>
+      <div @click="data.onlyPlusTda">onlyPlusTda</div>
       <div @click="data.onlyPlusTdb">onlyPlusTdb</div>
     </div>
   </div>
