@@ -22,10 +22,8 @@ onMounted(()=> {
 
 <template>
   <div v-if="props.playgroundPage.switch" class="child">
-    <div class="text-box-a">
-      <div class="text-box-b">
-        <div v-for="ele in props.playgroundPage.textArray" class="text">{{ ele }}</div>
-      </div>
+    <div class="text-box">
+      <div v-for="ele in props.playgroundPage.textArray" class="text">{{ ele }}</div>
     </div>
     <div class="control-box">
       <div class="a">
@@ -81,22 +79,13 @@ onMounted(()=> {
   z-index: 97;
 }
 
-.text-box-a {
+.text-box {
   width: 100%;
   height: 64%;
   box-sizing: border-box;
-  overflow: hidden;
-  display: flex;
-}
-
-.text-box-b {
-  width: calc(100% + 8px);
-  height: 100%;
-  box-sizing: border-box;
-  margin-left: -8px;
-  padding-bottom: 28px;
   overflow: scroll;
-  transform: rotate(180deg)
+  display: flex;
+  flex-direction: column-reverse;
 }
 
 .text {
@@ -104,7 +93,6 @@ onMounted(()=> {
   box-sizing: border-box;
   margin: 6px 0;
   border-bottom: 2px rgba(182, 182, 182, 0.6) solid;
-  transform: rotate(180deg);
 }
 
 .control-box {
