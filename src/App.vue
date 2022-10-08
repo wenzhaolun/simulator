@@ -9,7 +9,6 @@ import Playground from './components/Playground.vue'
 import EnemySelectionJumpBox from './components/EnemySelectionJumpBox.vue'
 import GameOverJumpBox from './components/GameOverJumpBox.vue'
 
-
 let viewDataForVue: ViewDataForVue = reactive({
   playerSetting: {
     switch: true
