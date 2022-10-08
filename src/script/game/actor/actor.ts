@@ -43,7 +43,7 @@ export abstract class Actor {
     /**
      * 选定敌对对象
      * @param uuid 想要选定对象的uuid
-     * @returns true代表选定成功，false代表失败。
+     * @returns true 代表选定成功，false代表失败。
      */
     public selectOpponent = (uuid: string) => {
         this.tempOpponentUUID = uuid
